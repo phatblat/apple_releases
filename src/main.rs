@@ -2,6 +2,12 @@
 // main.rs
 //
 
+static APP_USER_AGENT: &str = concat!(
+    env!("CARGO_PKG_NAME"),
+    "/",
+    env!("CARGO_PKG_VERSION"),
+);
+
 /// Executable entry point.
 fn main() {
     let apple_dev_news_updates = "https://developer.apple.com/news/releases/";
@@ -12,7 +18,10 @@ fn main() {
 
 /// Get a URL and return the body of the response.
 fn get(url: String) -> Result<String, Box<dyn std::error::Error>> {
-    let res = reqwest::blocking::get(url)?;
+    let client = reqwest::blocking::Client::builder()
+        .user_agent(APP_USER_AGENT)
+        .build()?;
+    let res = client.get(url).send()?;
     // println!("{:#?}", res);
 
     let body = res.text()?;
@@ -27,17 +36,14 @@ fn find(text: String) {
     let document = Html::parse_document(&text);
     // println!("{:#?}", document);
 
-    let selector_main = Selector::parse(r#"[class*="article-date"]"#).unwrap();
-    let main = document.select(&selector_main).next().unwrap();
-    println!("{:#?}", main);
+    let selector_article_title = Selector::parse(r#"a[class="article-title external-link"] h2"#).unwrap();
+    for title in document.select(&selector_article_title) {
+        println!("{}", title.inner_html());
+    }
 
-    let selector_grid = Selector::parse(r#"section"#).unwrap();
-    let _grid = document.select(&selector_grid).next().unwrap();
-    // println!("{:#?}", grid);
+    let selector_date = Selector::parse(r#"[class*="article-date"]"#).unwrap();
+    let date = document.select(&selector_date).next().unwrap();
+    // println!("{:#?}", date);
 
-    let selector = Selector::parse(r#"section.grid"#).unwrap();
 
-    let wrapper = document.select(&selector).next().unwrap();
-    println!("matched");
-    println!("{:#?}", wrapper);
 }
