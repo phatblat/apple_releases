@@ -43,11 +43,9 @@ fn find_articles(content: String) {
 
     let selector_article_title = Selector::parse(r#"a[class="article-title external-link"] h2"#).unwrap();
     let selector_date = Selector::parse(r#"p[class*="article-date"]"#).unwrap();
+    let selector_notes = Selector::parse(r#"span[class*="article-text"] il a.more"#).unwrap();
 
     for container in document.select(&selector_article_container) {
-        // let title = container.select(&selector_article_title).next();
-        // println!("{}", title.inner_html());
-
         match container.select(&selector_article_title).next() {
             Some(title) => println!("{}", title.inner_html()),
             None => continue,
@@ -57,9 +55,13 @@ fn find_articles(content: String) {
             Some(date) => println!("{}", date.inner_html()),
             None => continue,
         }
-        // println!("{:?}", title.inner_html());
 
-        // let date = container.select(&selector_date).next().unwrap();
-        // println!("{:#?}", date.inner_html());
+        match container.select(&selector_notes).next() {
+            Some(notes) => match notes.value().attr("href") {
+                Some(href) => println!("{}", href),
+                None => continue,
+            },
+            None => continue,
+        }
     }
 }
