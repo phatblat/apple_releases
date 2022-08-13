@@ -2,6 +2,9 @@
 // main.rs
 //
 
+use scraper::{Html, Selector};
+use scraper::html::Select;
+
 static APP_USER_AGENT: &str = concat!(
     env!("CARGO_PKG_NAME"),
     "/",
@@ -13,7 +16,7 @@ fn main() {
     let apple_dev_news_updates = "https://developer.apple.com/news/releases/";
     let body = get(apple_dev_news_updates.to_string()).unwrap();
 
-    find(body);
+    find_articles(body);
 }
 
 /// Get a URL and return the body of the response.
@@ -30,20 +33,33 @@ fn get(url: String) -> Result<String, Box<dyn std::error::Error>> {
     Ok(body)
 }
 
-fn find(text: String) {
-    use scraper::{Html, Selector};
+fn find_articles(content: String) {
+    let selector_article_container = Selector::parse(r#"section[class~="article-content-container"]"#).unwrap();
 
-    let document = Html::parse_document(&text);
+    let document = Html::parse_document(&content);
     // println!("{:#?}", document);
 
+    // let container = document.select( & selector_article_container);
+
     let selector_article_title = Selector::parse(r#"a[class="article-title external-link"] h2"#).unwrap();
-    for title in document.select(&selector_article_title) {
-        println!("{}", title.inner_html());
+    let selector_date = Selector::parse(r#"p[class*="article-date"]"#).unwrap();
+
+    for container in document.select(&selector_article_container) {
+        // let title = container.select(&selector_article_title).next();
+        // println!("{}", title.inner_html());
+
+        match container.select(&selector_article_title).next() {
+            Some(title) => println!("{}", title.inner_html()),
+            None => continue,
+        }
+
+        match container.select(&selector_date).next() {
+            Some(date) => println!("{}", date.inner_html()),
+            None => continue,
+        }
+        // println!("{:?}", title.inner_html());
+
+        // let date = container.select(&selector_date).next().unwrap();
+        // println!("{:#?}", date.inner_html());
     }
-
-    let selector_date = Selector::parse(r#"[class*="article-date"]"#).unwrap();
-    let date = document.select(&selector_date).next().unwrap();
-    // println!("{:#?}", date);
-
-
 }
