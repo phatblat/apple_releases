@@ -1,18 +1,21 @@
-use std::collections::HashMap;
+//
+// main.rs
+//
 
+/// Executable entry point.
 fn main() {
-    get("https://httpbin.org/ip".to_string())
+    let apple_dev_news_updates = "https://developer.apple.com/news/releases/";
+    let body = get(apple_dev_news_updates.to_string())
         .unwrap();
-        // .json::<HashMap<String, String>>()
-        // .unwrap()
-        // .get("origin")
-        // .unwrap()
-        // .to_string();
 }
 
-fn get(url: String) -> Result<(), Box<dyn std::error::Error>> {
-    let resp = reqwest::blocking::get(url)?
-        .json::<HashMap<String, String>>()?;
-    println!("{:#?}", resp);
-    Ok(())
+/// Get a URL and return the body of the response.
+fn get(url: String) -> Result<String, Box<dyn std::error::Error>> {
+    let res = reqwest::blocking::get(url)?;
+    // println!("{:#?}", res);
+
+    let body = res.text()?;
+    println!("{}", body);
+
+    Ok(body)
 }
