@@ -2,25 +2,74 @@
 //! main.rs
 //!
 
-use scraper::{Html, Selector};
-use scraper::html::Select;
+use lazy_static::lazy_static;
+use scraper::{ElementRef, Html, Selector};
 
+type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
+type GenericResult<T> = Result<T, GenericError>;
+
+/// User agent for network requests.
 static APP_USER_AGENT: &str = concat!(
-    env!("CARGO_PKG_NAME"),
-    "/",
-    env!("CARGO_PKG_VERSION"),
+env!("CARGO_PKG_NAME"),
+"/",
+env!("CARGO_PKG_VERSION"),
 );
 
+/// An article from the Apple Developer software releases site.
+#[allow(dead_code)]
+struct Article {
+    title: String,
+    date: String,
+}
+
+/* ---------------------------------------------------------------------------------------------- */
+
+/// Collection of scraper Selectors.
+/// https://docs.rs/scraper/latest/scraper/
+struct Selectors {
+    /// Parses the article container, the top-level containing values of interest.
+    article: Selector,
+    /// Parses the article title.
+    title: Selector,
+    /// Parses the article date.
+    date: Selector,
+    /// Parses the article link.
+    notes: Selector,
+}
+
+impl Selectors {
+    fn new() -> Self {
+        Self {
+            article: Selector::parse(r#"section.article-content-container"#).unwrap(),
+            title: Selector::parse(r#"a.article-title h2"#).unwrap(),
+            date: Selector::parse(r#"p.article-date"#).unwrap(),
+            notes: Selector::parse(r#"span.article-text il a.more"#).unwrap(),
+        }
+    }
+}
+
+lazy_static! {
+    static ref SELECTORS: Selectors = Selectors::new();
+}
+
+/* ---------------------------------------------------------------------------------------------- */
+
 /// Executable entry point.
-fn main() {
+fn main() -> GenericResult<Article> {
     let apple_dev_news_updates = "https://developer.apple.com/news/releases/";
     let body = get(apple_dev_news_updates.to_string()).unwrap();
 
-    find_articles(body);
+    find_articles(body)
 }
 
-/// Get a URL and return the body of the response.
-fn get(url: String) -> Result<String, Box<dyn std::error::Error>> {
+/* ---------------------------------------------------------------------------------------------- */
+
+/// Gets a URL and returns the body of the response.
+///
+/// # Arguments
+///
+/// - `url` - The URL to get.
+fn get(url: String) -> GenericResult<String> {
     let client = reqwest::blocking::Client::builder()
         .user_agent(APP_USER_AGENT)
         .build()?;
@@ -33,30 +82,31 @@ fn get(url: String) -> Result<String, Box<dyn std::error::Error>> {
     Ok(body)
 }
 
-fn find_articles(content: String) {
-    let selector_article_container = Selector::parse(r#"section[class~="article-content-container"]"#).unwrap();
-
+/// Finds articles in the HTML.
+///
+/// # Arguments
+///
+/// - `content` - The HTML to parse.
+///
+/// # Returns
+///
+/// A list of articles.
+fn find_articles(content: String) -> GenericResult<Article> {
     let document = Html::parse_document(&content);
-    // println!("{:#?}", document);
 
-    // let container = document.select( & selector_article_container);
-
-    let selector_article_title = Selector::parse(r#"a[class="article-title external-link"] h2"#).unwrap();
-    let selector_date = Selector::parse(r#"p[class*="article-date"]"#).unwrap();
-    let selector_notes = Selector::parse(r#"span[class*="article-text"] il a.more"#).unwrap();
-
-    for container in document.select(&selector_article_container) {
-        match container.select(&selector_article_title).next() {
+    for container in document.select(&SELECTORS.article) {
+        let _ = parse_article_title(&container, &SELECTORS.title);
+        match container.select(&SELECTORS.title).next() {
             Some(title) => println!("{}", title.inner_html()),
             None => continue,
         }
 
-        match container.select(&selector_date).next() {
+        match container.select(&SELECTORS.date).next() {
             Some(date) => println!("{}", date.inner_html()),
             None => continue,
         }
 
-        match container.select(&selector_notes).next() {
+        match container.select(&SELECTORS.notes).next() {
             Some(notes) => match notes.value().attr("href") {
                 Some(href) => println!("{}", href),
                 None => continue,
@@ -64,7 +114,24 @@ fn find_articles(content: String) {
             None => continue,
         }
     }
+
+    Ok(Article {
+        title: String::from(""),
+        date: String::from(""),
+    })
 }
+
+fn parse_article_title(element: &ElementRef, selector: &Selector) -> GenericResult<String> {
+    Ok(
+        element
+            .select(selector)
+            .next()
+            .ok_or("No title found")?
+            .inner_html(),
+    )
+}
+
+/* ---------------------------------------------------------------------------------------------- */
 
 #[test]
 fn test_get() {
@@ -106,5 +173,25 @@ fn test_parse() {
 </section>
     "###.to_string();
 
-    find_articles(html);
+    find_articles(html).expect("TODO: panic message");
+}
+
+
+#[test]
+fn test_parse_title() {
+    let html = r###"
+    <a class="article-title external-link" href="/download/"><h2>Xcode 14 beta 5 (14A5294e)</h2></a>
+    "###.to_string();
+
+    // title: Selector::parse(r#"a[class="article-title external-link"] h2"#).unwrap(),
+    let selector = Selector::parse(r#"a.article-title h2"#).unwrap();
+    let fragment = Html::parse_fragment(&html);
+
+    // test parsing
+    let element = fragment.select(&selector).next().unwrap();
+    println!("{}", element.inner_html());
+
+    let title = parse_article_title(&fragment.root_element(), &selector).unwrap();
+
+    assert_eq!(title, "Xcode 14 beta 5 (14A5294e)");
 }
