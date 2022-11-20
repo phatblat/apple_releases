@@ -121,12 +121,34 @@ fn find_articles(content: String) -> GenericResult<Article> {
     })
 }
 
+/// Parses the article title.
+///
+/// # Arguments
+///
+/// - `element` - The HTML ElementRef to parse.
+/// - `selector` - The selector to use.
 fn parse_article_title(element: &ElementRef, selector: &Selector) -> GenericResult<String> {
     Ok(
         element
             .select(selector)
             .next()
             .ok_or("No title found")?
+            .inner_html(),
+    )
+}
+
+/// Parses the article date.
+///
+/// # Arguments
+///
+/// - `element` - The HTML ElementRef to parse.
+/// - `selector` - The selector to use.
+fn parse_article_date(element: &ElementRef, selector: &Selector) -> GenericResult<String> {
+    Ok(
+        element
+            .select(selector)
+            .next()
+            .ok_or("No date found")?
             .inner_html(),
     )
 }
@@ -176,22 +198,39 @@ fn test_parse() {
     find_articles(html).expect("TODO: panic message");
 }
 
-
 #[test]
 fn test_parse_title() {
     let html = r###"
     <a class="article-title external-link" href="/download/"><h2>Xcode 14 beta 5 (14A5294e)</h2></a>
     "###.to_string();
 
-    // title: Selector::parse(r#"a[class="article-title external-link"] h2"#).unwrap(),
-    let selector = Selector::parse(r#"a.article-title h2"#).unwrap();
     let fragment = Html::parse_fragment(&html);
 
-    // test parsing
+    // test parsing using local selector
+    let selector = Selector::parse(r#"a.article-title h2"#).unwrap();
     let element = fragment.select(&selector).next().unwrap();
     println!("{}", element.inner_html());
 
-    let title = parse_article_title(&fragment.root_element(), &selector).unwrap();
+    let title = parse_article_title(&fragment.root_element(), &SELECTORS.title).unwrap();
 
     assert_eq!(title, "Xcode 14 beta 5 (14A5294e)");
+}
+
+#[test]
+fn test_parse_date() {
+    let html = r###"
+    <div class="article-text-wrapper">
+        <p class="lighter  article-date">August 8, 2022</p>
+    "###.to_string();
+
+    let fragment = Html::parse_fragment(&html);
+
+    // test parsing using local selector
+    let selector = Selector::parse(r#"p.article-date"#).unwrap();
+    let element = fragment.select(&selector).next().unwrap();
+    println!("{}", element.inner_html());
+
+    let title = parse_article_date(&fragment.root_element(), &SELECTORS.date).unwrap();
+
+    assert_eq!(title, "August 8, 2022");
 }
