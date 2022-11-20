@@ -5,6 +5,7 @@
 use std::string::ToString;
 use lazy_static::lazy_static;
 use scraper::{ElementRef, Html, Selector};
+use url::Url;
 
 type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
 type GenericResult<T> = Result<T, GenericError>;
@@ -20,7 +21,7 @@ env!("CARGO_PKG_VERSION"),
 struct Article {
     title: String,
     date: String,
-    release_notes_url: Option<String>,
+    release_notes_url: Option<Url>,
 }
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -71,6 +72,38 @@ fn main() {
 
 /* ---------------------------------------------------------------------------------------------- */
 
+/// Finds articles in the HTML.
+///
+/// # Arguments
+///
+/// - `content` - The HTML to parse.
+///
+/// # Returns
+///
+/// A list of articles.
+fn find_articles(content: String) -> GenericResult<Vec<Article>> {
+    let document = Html::parse_document(&content);
+    let mut articles: Vec<Article> = Vec::new();
+
+    for container in document.select(&SELECTORS.article) {
+        let title = parse_article_title(&container, &SELECTORS.title).expect("title");
+        let date = parse_article_date(&container, &SELECTORS.date).expect("date");
+        let notes = parse_release_notes_link(&container, &SELECTORS.release_notes_url);
+        let notes_url = build_notes_url(notes);
+
+        let url = notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
+        println!("{} - {}, <{}>", date, title, url.unwrap_or_default());
+
+        articles.push(Article {
+            title,
+            date,
+            release_notes_url: notes_url,
+        });
+    }
+
+    Ok(articles)
+}
+
 /// Gets a URL and returns the body of the response.
 ///
 /// # Arguments
@@ -89,33 +122,16 @@ fn get(url: String) -> GenericResult<String> {
     Ok(body)
 }
 
-/// Finds articles in the HTML.
+/// Builds the release notes URL.
 ///
 /// # Arguments
 ///
-/// - `content` - The HTML to parse.
-///
-/// # Returns
-///
-/// A list of articles.
-fn find_articles(content: String) -> GenericResult<Vec<Article>> {
-    let document = Html::parse_document(&content);
-    let mut articles: Vec<Article> = Vec::new();
-
-    for container in document.select(&SELECTORS.article) {
-        let title = parse_article_title(&container, &SELECTORS.title).expect("title");
-        let date = parse_article_date(&container, &SELECTORS.date).expect("date");
-        println!("{} - {}", title, date);
-        let notes = parse_release_notes_link(&container, &SELECTORS.release_notes_url);
-
-        articles.push(Article {
-            title,
-            date,
-            release_notes_url: notes,
-        });
-    }
-
-    Ok(articles)
+/// - `notes` - The release notes path.
+fn build_notes_url(notes_path: Option<String>) -> Option<Url> {
+    notes_path.map(|path| {
+        let base_url = Url::parse(APPLE_DEV_RELEASES).unwrap();
+        base_url.join(&path).unwrap()
+    })
 }
 
 /// Parses the article title.
@@ -273,4 +289,19 @@ fn test_parse_release_notes_link() {
     let notes_url = parse_release_notes_link(&fragment.root_element(), &SELECTORS.release_notes_url).unwrap();
 
     assert_eq!(notes_url, "/go/?id=xcode-14-sdk-rn");
+}
+
+#[test]
+fn test_build_notes_url() {
+    let expected_url = Url::parse("https://developer.apple.com/go/?id=xcode-14-sdk-rn").unwrap();
+    let path = Some("/go/?id=xcode-14-sdk-rn".to_string());
+    let url = build_notes_url(path).unwrap();
+    assert_eq!(url, expected_url);
+}
+
+#[test]
+fn test_build_notes_url_with_none() {
+    let expected_url = None;
+    let url = build_notes_url(None);
+    assert_eq!(url, expected_url);
 }
