@@ -20,6 +20,7 @@ env!("CARGO_PKG_VERSION"),
 struct Article {
     title: String,
     date: String,
+    release_notes_url: Option<String>,
 }
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -34,7 +35,7 @@ struct Selectors {
     /// Parses the article date.
     date: Selector,
     /// Parses the release notes link.
-    notes: Selector,
+    release_notes_url: Selector,
 }
 
 impl Selectors {
@@ -43,7 +44,7 @@ impl Selectors {
             article: Selector::parse(r#"section.article-content-container"#).unwrap(),
             title: Selector::parse(r#"a.article-title h2"#).unwrap(),
             date: Selector::parse(r#"p.article-date"#).unwrap(),
-            notes: Selector::parse(r#"span.article-text il a.more"#).unwrap(),
+            release_notes_url: Selector::parse(r#"span.article-text il a.more"#).unwrap(),
         }
     }
 }
@@ -55,11 +56,17 @@ lazy_static! {
 /* ---------------------------------------------------------------------------------------------- */
 
 /// Executable entry point.
-fn main() -> GenericResult<Article> {
+fn main() {
     let apple_dev_news_updates = "https://developer.apple.com/news/releases/";
     let body = get(apple_dev_news_updates.to_string()).unwrap();
 
-    find_articles(body)
+    let articles = find_articles(body).unwrap();
+
+    articles.iter().for_each(|article| {
+        println!("Title: {}", article.title);
+        println!("Date: {}", article.date);
+        println!("Release Notes: {:?}", article.release_notes_url);
+    });
 }
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -91,34 +98,24 @@ fn get(url: String) -> GenericResult<String> {
 /// # Returns
 ///
 /// A list of articles.
-fn find_articles(content: String) -> GenericResult<Article> {
+fn find_articles(content: String) -> GenericResult<Vec<Article>> {
     let document = Html::parse_document(&content);
+    let mut articles: Vec<Article> = Vec::new();
 
     for container in document.select(&SELECTORS.article) {
-        let _ = parse_article_title(&container, &SELECTORS.title);
-        match container.select(&SELECTORS.title).next() {
-            Some(title) => println!("{}", title.inner_html()),
-            None => continue,
-        }
+        let title = parse_article_title(&container, &SELECTORS.title).expect("title");
+        let date = parse_article_date(&container, &SELECTORS.date).expect("date");
+        println!("{} - {}", title, date);
+        let notes = parse_release_notes_link(&container, &SELECTORS.release_notes_url);
 
-        match container.select(&SELECTORS.date).next() {
-            Some(date) => println!("{}", date.inner_html()),
-            None => continue,
-        }
-
-        match container.select(&SELECTORS.notes).next() {
-            Some(notes) => match notes.value().attr("href") {
-                Some(href) => println!("{}", href),
-                None => continue,
-            },
-            None => continue,
-        }
+        articles.push(Article {
+            title,
+            date,
+            release_notes_url: notes,
+        });
     }
 
-    Ok(Article {
-        title: String::from(""),
-        date: String::from(""),
-    })
+    Ok(articles)
 }
 
 /// Parses the article title.
@@ -159,17 +156,17 @@ fn parse_article_date(element: &ElementRef, selector: &Selector) -> GenericResul
 ///
 /// - `element` - The HTML ElementRef to parse.
 /// - `selector` - The selector to use.
-fn parse_release_notes_link(element: &ElementRef, selector: &Selector) -> GenericResult<String> {
-    Ok(
-        element
+fn parse_release_notes_link(element: &ElementRef, selector: &Selector) -> Option<String> {
+    match element
             .select(selector)
             .next()
-            .ok_or("No release notes link found")?
+            .ok_or("No release notes link found")
+            .ok()?
             .value()
-            .attr("href")
-            .ok_or("No href attribute found")?
-            .to_string()
-    )
+            .attr("href") {
+        Some(url) => Some(url.to_string()),
+        None => None,
+    }
 }
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -273,7 +270,7 @@ fn test_parse_release_notes_link() {
         // .to_string()
     println!("{}", element.attr("href").unwrap());
 
-    let notes_url = parse_release_notes_link(&fragment.root_element(), &SELECTORS.notes).unwrap();
+    let notes_url = parse_release_notes_link(&fragment.root_element(), &SELECTORS.release_notes_url).unwrap();
 
     assert_eq!(notes_url, "/go/?id=xcode-14-sdk-rn");
 }
