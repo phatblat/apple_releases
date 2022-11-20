@@ -33,7 +33,7 @@ struct Selectors {
     title: Selector,
     /// Parses the article date.
     date: Selector,
-    /// Parses the article link.
+    /// Parses the release notes link.
     notes: Selector,
 }
 
@@ -153,6 +153,25 @@ fn parse_article_date(element: &ElementRef, selector: &Selector) -> GenericResul
     )
 }
 
+/// Parses the release notes link.
+///
+/// # Arguments
+///
+/// - `element` - The HTML ElementRef to parse.
+/// - `selector` - The selector to use.
+fn parse_release_notes_link(element: &ElementRef, selector: &Selector) -> GenericResult<String> {
+    Ok(
+        element
+            .select(selector)
+            .next()
+            .ok_or("No release notes link found")?
+            .value()
+            .attr("href")
+            .ok_or("No href attribute found")?
+            .to_string()
+    )
+}
+
 /* ---------------------------------------------------------------------------------------------- */
 
 #[test]
@@ -219,7 +238,6 @@ fn test_parse_title() {
 #[test]
 fn test_parse_date() {
     let html = r###"
-    <div class="article-text-wrapper">
         <p class="lighter  article-date">August 8, 2022</p>
     "###.to_string();
 
@@ -230,7 +248,32 @@ fn test_parse_date() {
     let element = fragment.select(&selector).next().unwrap();
     println!("{}", element.inner_html());
 
-    let title = parse_article_date(&fragment.root_element(), &SELECTORS.date).unwrap();
+    let date = parse_article_date(&fragment.root_element(), &SELECTORS.date).unwrap();
 
-    assert_eq!(title, "August 8, 2022");
+    assert_eq!(date, "August 8, 2022");
+}
+
+#[test]
+fn test_parse_release_notes_link() {
+    let html = r###"
+        <span class="article-text">
+            <p> <a href="/download/applications" class="more">View downloads</a></p>
+            <il>
+                <p><a href="/go/?id=xcode-14-sdk-rn" class="more">View release notes</a></p>
+            </il>
+        </span>
+    "###.to_string();
+
+    let fragment = Html::parse_fragment(&html);
+
+    // test parsing using local selector
+    let selector = Selector::parse(r#"span.article-text il a.more"#).unwrap();
+    let element = fragment.select(&selector).next().unwrap().value();
+        // .ok_or("No href attribute found")?
+        // .to_string()
+    println!("{}", element.attr("href").unwrap());
+
+    let notes_url = parse_release_notes_link(&fragment.root_element(), &SELECTORS.notes).unwrap();
+
+    assert_eq!(notes_url, "/go/?id=xcode-14-sdk-rn");
 }
