@@ -2,6 +2,7 @@
 //! main.rs
 //!
 
+use std::string::ToString;
 use lazy_static::lazy_static;
 use scraper::{ElementRef, Html, Selector};
 
@@ -16,7 +17,6 @@ env!("CARGO_PKG_VERSION"),
 );
 
 /// An article from the Apple Developer software releases site.
-#[allow(dead_code)]
 struct Article {
     title: String,
     date: String,
@@ -25,8 +25,7 @@ struct Article {
 
 /* ---------------------------------------------------------------------------------------------- */
 
-/// Collection of scraper Selectors.
-/// https://docs.rs/scraper/latest/scraper/
+/// Collection of scraper Selectors - https://docs.rs/scraper/latest/scraper/
 struct Selectors {
     /// Parses the article container, the top-level containing values of interest.
     article: Selector,
@@ -55,10 +54,11 @@ lazy_static! {
 
 /* ---------------------------------------------------------------------------------------------- */
 
+const APPLE_DEV_RELEASES: &str = "https://developer.apple.com/news/releases/";
+
 /// Executable entry point.
 fn main() {
-    let apple_dev_news_updates = "https://developer.apple.com/news/releases/";
-    let body = get(apple_dev_news_updates.to_string()).unwrap();
+    let body = get(APPLE_DEV_RELEASES.to_string()).unwrap();
 
     let articles = find_articles(body).unwrap();
 
@@ -173,8 +173,7 @@ fn parse_release_notes_link(element: &ElementRef, selector: &Selector) -> Option
 
 #[test]
 fn test_get() {
-    let apple_dev_news_updates = "https://developer.apple.com/news/releases/";
-    let body = get(apple_dev_news_updates.to_string()).unwrap();
+    let body = get(APPLE_DEV_RELEASES.to_string()).unwrap();
     assert!(body.len() > 0);
 }
 
@@ -211,7 +210,8 @@ fn test_parse() {
 </section>
     "###.to_string();
 
-    find_articles(html).expect("TODO: panic message");
+    let articles = find_articles(html).expect("Err collecting articles");
+    assert_eq!(articles.len(), 1);
 }
 
 #[test]
