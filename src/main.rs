@@ -2,11 +2,13 @@
 //! main.rs
 //!
 
-use std::fmt::{Display, Formatter};
 use std::string::ToString;
 use lazy_static::lazy_static;
 use scraper::{ElementRef, Html, Selector};
 use url::Url;
+use article::Article;
+
+mod article;
 
 type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
 type GenericResult<T> = Result<T, GenericError>;
@@ -17,20 +19,6 @@ env!("CARGO_PKG_NAME"),
 "/",
 env!("CARGO_PKG_VERSION"),
 );
-
-/// An article from the Apple Developer software releases site.
-struct Article {
-    title: String,
-    date: String,
-    release_notes_url: Option<Url>,
-}
-
-impl Display for Article {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let url = self.release_notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
-        write!(f, "{} - {}, <{}>", self.date, self.title, url.unwrap_or_default())
-    }
-}
 
 /* ---------------------------------------------------------------------------------------------- */
 
