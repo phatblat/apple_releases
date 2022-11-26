@@ -13,25 +13,22 @@ use crate::selectors::Selectors;
 mod article;
 mod selectors;
 
+/* ---------------------------------------------------------------------------------------------- */
+
 type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
 type GenericResult<T> = Result<T, GenericError>;
 
 /// User agent for network requests.
-static APP_USER_AGENT: &str = concat!(
-env!("CARGO_PKG_NAME"),
-"/",
-env!("CARGO_PKG_VERSION"),
-);
+const APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
-/* ---------------------------------------------------------------------------------------------- */
+/// Webpage listing new software releases.
+const APPLE_DEV_RELEASES: &str = "https://developer.apple.com/news/releases/";
 
 lazy_static! {
     static ref SELECTORS: Selectors = Selectors::new();
 }
 
 /* ---------------------------------------------------------------------------------------------- */
-
-const APPLE_DEV_RELEASES: &str = "https://developer.apple.com/news/releases/";
 
 /// Executable entry point.
 fn main() {
@@ -68,8 +65,9 @@ fn find_articles(content: String) -> GenericResult<Vec<Article>> {
             .filter(|url| url.as_str().contains("developer.apple.com"))
             .map(|url| unfurl(url).unwrap());
 
-        let url = notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
-        println!("{} - {}, <{}>", date, title, url.unwrap_or_default());
+        // TODO: Log debug
+        // let url = notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
+        // println!("{} - {}, <{}>", date, title, url.unwrap_or_default());
 
         articles.push(Article {
             title,
@@ -120,13 +118,15 @@ fn unfurl(url: Url) -> GenericResult<Url> {
     let tokens = script.split("'");
     let path = tokens.take(2).last().unwrap();
 
-    println!("{:?}", path);
+    // TODO: Log debug
+    // println!("{:?}", path);
 
     let releases_url = Url::parse(APPLE_DEV_RELEASES).unwrap();
     let base = base_url(releases_url).unwrap();
     let full_url = base.join(path).unwrap();
 
-    println!("{}", full_url);
+    // TODO: Log debug
+    // println!("{}", full_url);
 
     Ok(full_url)
 }
