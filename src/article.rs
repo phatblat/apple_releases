@@ -7,9 +7,9 @@ use url::Url;
 
 /// An article from the Apple Developer software releases site.
 pub struct Article {
-    pub(crate) title: String,
-    pub(crate) date: String,
-    pub(crate) release_notes_url: Option<Url>,
+    pub title: String,
+    pub date: String,
+    pub release_notes_url: Option<Url>,
 }
 
 impl Display for Article {

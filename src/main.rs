@@ -6,9 +6,12 @@ use std::string::ToString;
 use lazy_static::lazy_static;
 use scraper::{ElementRef, Html, Selector};
 use url::Url;
-use article::Article;
+
+use crate::article::Article;
+use crate::selectors::Selectors;
 
 mod article;
+mod selectors;
 
 type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
 type GenericResult<T> = Result<T, GenericError>;
@@ -21,33 +24,6 @@ env!("CARGO_PKG_VERSION"),
 );
 
 /* ---------------------------------------------------------------------------------------------- */
-
-/// Collection of scraper Selectors - https://docs.rs/scraper/latest/scraper/
-struct Selectors {
-    /// Parses the article container, the top-level containing values of interest.
-    article: Selector,
-    /// Parses the article title.
-    title: Selector,
-    /// Parses the article date.
-    date: Selector,
-    /// Parses the short release notes URL.
-    release_notes_short_url: Selector,
-    /// Parses the release notes URL inside a script tag.
-    release_notes_full_url: Selector,
-}
-
-impl Selectors {
-    fn new() -> Self {
-        Self {
-            article: Selector::parse(r#"section.article-content-container"#).unwrap(),
-            title: Selector::parse(r#"a.article-title h2"#).unwrap(),
-            date: Selector::parse(r#"p.article-date"#).unwrap(),
-            release_notes_short_url: Selector::parse(r#"span.article-text il a.more"#).unwrap(),
-            // Selects the last of 4 sibling script tags.
-            release_notes_full_url: Selector::parse(r#"script + script + script + script"#).unwrap(),
-        }
-    }
-}
 
 lazy_static! {
     static ref SELECTORS: Selectors = Selectors::new();
