@@ -2,64 +2,28 @@
 //! main.rs
 //!
 
-use std::fmt::{Display, Formatter};
 use std::string::ToString;
 use lazy_static::lazy_static;
-use scraper::{ElementRef, Html, Selector};
-use url::Url;
+
+use crate::cli::cli;
+use crate::selectors::Selectors;
+
+mod article;
+mod cli;
+mod parse;
+mod selectors;
+mod url;
+
+/* ---------------------------------------------------------------------------------------------- */
 
 type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
 type GenericResult<T> = Result<T, GenericError>;
 
 /// User agent for network requests.
-static APP_USER_AGENT: &str = concat!(
-env!("CARGO_PKG_NAME"),
-"/",
-env!("CARGO_PKG_VERSION"),
-);
+const APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
-/// An article from the Apple Developer software releases site.
-struct Article {
-    title: String,
-    date: String,
-    release_notes_url: Option<Url>,
-}
-
-impl Display for Article {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let url = self.release_notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
-        write!(f, "{} - {}, <{}>", self.date, self.title, url.unwrap_or_default())
-    }
-}
-
-/* ---------------------------------------------------------------------------------------------- */
-
-/// Collection of scraper Selectors - https://docs.rs/scraper/latest/scraper/
-struct Selectors {
-    /// Parses the article container, the top-level containing values of interest.
-    article: Selector,
-    /// Parses the article title.
-    title: Selector,
-    /// Parses the article date.
-    date: Selector,
-    /// Parses the short release notes URL.
-    release_notes_short_url: Selector,
-    /// Parses the release notes URL inside a script tag.
-    release_notes_full_url: Selector,
-}
-
-impl Selectors {
-    fn new() -> Self {
-        Self {
-            article: Selector::parse(r#"section.article-content-container"#).unwrap(),
-            title: Selector::parse(r#"a.article-title h2"#).unwrap(),
-            date: Selector::parse(r#"p.article-date"#).unwrap(),
-            release_notes_short_url: Selector::parse(r#"span.article-text il a.more"#).unwrap(),
-            // Selects the last of 4 sibling script tags.
-            release_notes_full_url: Selector::parse(r#"script + script + script + script"#).unwrap(),
-        }
-    }
-}
+/// Webpage listing new software releases.
+const APPLE_DEV_RELEASES: &str = "https://developer.apple.com/news/releases/";
 
 lazy_static! {
     static ref SELECTORS: Selectors = Selectors::new();
@@ -67,377 +31,25 @@ lazy_static! {
 
 /* ---------------------------------------------------------------------------------------------- */
 
-const APPLE_DEV_RELEASES: &str = "https://developer.apple.com/news/releases/";
-
 /// Executable entry point.
 fn main() {
-    let body = get(APPLE_DEV_RELEASES.to_string()).unwrap();
+    let args = cli().get_matches();
+    let show_all = args.get_one::<bool>("all").unwrap();
 
-    let articles = find_articles(body).unwrap();
+    let body = url::get(APPLE_DEV_RELEASES.to_string()).unwrap();
+
+    let articles = parse::parse_articles(body).unwrap();
 
     articles.iter().for_each(|article| {
-        println!("{}", article);
+        match article.release_notes_url {
+            Some(_) => {
+                println!("{}", article);
+            }
+            _ => {
+                if *show_all {
+                    println!("{}", article);
+                }
+            }
+        }
     });
-}
-
-/* ---------------------------------------------------------------------------------------------- */
-
-/// Finds articles in the HTML.
-///
-/// # Arguments
-///
-/// - `content` - The HTML to parse.
-///
-/// # Returns
-///
-/// A list of articles.
-fn find_articles(content: String) -> GenericResult<Vec<Article>> {
-    let document = Html::parse_document(&content);
-    let mut articles: Vec<Article> = Vec::new();
-
-    for container in document.select(&SELECTORS.article) {
-        let title = parse_article_title(&container, &SELECTORS.title).expect("title");
-        let date = parse_article_date(&container, &SELECTORS.date).expect("date");
-        let notes = parse_release_notes_link(&container, &SELECTORS.release_notes_short_url);
-        let notes_url = build_notes_url(notes)
-            // Ignore Transporter app store links
-            .filter(|url| url.as_str().contains("developer.apple.com"))
-            .map(|url| unfurl(url).unwrap());
-
-        let url = notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
-        println!("{} - {}, <{}>", date, title, url.unwrap_or_default());
-
-        articles.push(Article {
-            title,
-            date,
-            release_notes_url: notes_url,
-        });
-    }
-
-    Ok(articles)
-}
-
-/// Gets a URL and returns the body of the response.
-///
-/// # Arguments
-///
-/// - `url` - The URL to get.
-fn get(url: String) -> GenericResult<String> {
-    let client = reqwest::blocking::Client::builder()
-        .user_agent(APP_USER_AGENT)
-        .build()?;
-    let res = client.get(url).send()?;
-    // println!("{:#?}", res);
-
-    let body = res.text()?;
-    // println!("{}", body);
-
-    Ok(body)
-}
-
-/// Unfurls a release notes URL. These URLs use in-page JavaScript to redirect to the actual URL.
-///
-/// ```
-/// <script>
-/// window.setTimeout("window.location.replace('/documentation/ios-ipados-release-notes/ios-ipados-16_2-release-notes')", 1);
-/// </script>
-/// ```
-///
-/// # Arguments
-///
-/// - `url` - The URL at the end of a redirect chain.
-fn unfurl(url: Url) -> GenericResult<Url> {
-    let body = get(url.to_string()).unwrap();
-    let document = Html::parse_document(&body);
-
-    let script = parse_article_title(&document.root_element(), &SELECTORS.release_notes_full_url)
-        .unwrap();
-
-    let tokens = script.split("'");
-    let path = tokens.take(2).last().unwrap();
-
-    println!("{:?}", path);
-
-    let releases_url = Url::parse(APPLE_DEV_RELEASES).unwrap();
-    let base = base_url(releases_url).unwrap();
-    let full_url = base.join(path).unwrap();
-
-    println!("{}", full_url);
-
-    Ok(full_url)
-}
-
-fn base_url(mut url: Url) -> GenericResult<Url> {
-    match url.path_segments_mut() {
-        Ok(mut path) => {
-            path.clear();
-        }
-        Err(_) => {
-            return Err(GenericError::try_from("Error extracting base URL").unwrap());
-        }
-    }
-
-    url.set_query(None);
-
-    Ok(url)
-}
-
-/// Builds the release notes URL.
-///
-/// # Arguments
-///
-/// - `notes` - The release notes path.
-fn build_notes_url(notes_path: Option<String>) -> Option<Url> {
-    notes_path.map(|path| {
-        let base_url = Url::parse(APPLE_DEV_RELEASES).unwrap();
-        base_url.join(&path).unwrap()
-    })
-}
-
-/// Parses the article title.
-///
-/// # Arguments
-///
-/// - `element` - The HTML ElementRef to parse.
-/// - `selector` - The selector to use.
-fn parse_article_title(element: &ElementRef, selector: &Selector) -> GenericResult<String> {
-    Ok(
-        element
-            .select(selector)
-            .next()
-            .ok_or("No title found")?
-            .inner_html(),
-    )
-}
-
-/// Parses the article date.
-///
-/// # Arguments
-///
-/// - `element` - The HTML ElementRef to parse.
-/// - `selector` - The selector to use.
-fn parse_article_date(element: &ElementRef, selector: &Selector) -> GenericResult<String> {
-    Ok(
-        element
-            .select(selector)
-            .next()
-            .ok_or("No date found")?
-            .inner_html(),
-    )
-}
-
-/// Parses the release notes link.
-///
-/// # Arguments
-///
-/// - `element` - The HTML ElementRef to parse.
-/// - `selector` - The selector to use.
-fn parse_release_notes_link(element: &ElementRef, selector: &Selector) -> Option<String> {
-    match element
-            .select(selector)
-            .next()
-            .ok_or("No release notes link found")
-            .ok()?
-            .value()
-            .attr("href") {
-        Some(url) => Some(url.to_string()),
-        None => None,
-    }
-}
-
-/* ---------------------------------------------------------------------------------------------- */
-
-#[test]
-fn test_get() {
-    let body = get(APPLE_DEV_RELEASES.to_string()).unwrap();
-    assert!(body.len() > 0);
-}
-
-#[test]
-fn test_parse_redirect_script() {
-    let html = r###"
-    <!-- metrics -->
-    <script>
-        /* RSID: */
-        var s_account="awdappledeveloper"
-    </script>
-    <script src="/assets/metrics/scripts/analytics.js?10202020"></script>
-    <script>
-        s.pageName= AC && AC.Tracking && AC.Tracking.pageName();
-        s.channel="www.en.developer"
-        s.channel="www.en.developer";
-
-
-        /************* DO NOT ALTER ANYTHING BELOW THIS LINE ! **************/
-        var s_code=s.t();if(s_code)document.write(s_code)
-    </script>
-    <!-- /metrics -->
-    <script>
-    window.setTimeout("window.location.replace('/documentation/ios-ipados-release-notes/ios-ipados-16_2-release-notes')", 1);
-    </script>
-    "###.to_string();
-
-    let fragment = Html::parse_fragment(&html);
-
-    // test parsing using local selector
-    let selector = Selector::parse(r#"script + script + script + script"#).unwrap();
-    let element = fragment.select(&selector).next().unwrap();
-    println!("{}", element.inner_html());
-
-    let script = parse_article_title(&fragment.root_element(), &SELECTORS.release_notes_full_url)
-        .unwrap();
-
-    assert_eq!(
-        script.trim(),
-        r#"window.setTimeout("window.location.replace('/documentation/ios-ipados-release-notes/ios-ipados-16_2-release-notes')", 1);"#
-    );
-}
-
-#[test]
-fn test_unfurl() {
-    let expected_url = Url::parse("https://developer.apple.com/documentation/xcode-release-notes/xcode-14-release-notes").unwrap();
-    let url = Url::parse("https://developer.apple.com/go/?id=xcode-14-sdk-rn").unwrap();
-    let redirect_url = unfurl(url).unwrap();
-    assert_eq!(redirect_url, expected_url);
-}
-
-#[test]
-fn test_parse() {
-    let html = r###"
-<section class="article-content-container column large-9 medium-9 small-12 no-padding-left padding-right-small padding-top padding-bottom-small divider-top">
-    <a class="article-title external-link" href="/download/"><h2>Xcode 14 beta 5 (14A5294e)</h2></a>
-    <div class="article-text-wrapper">
-        <p class="lighter  article-date">August 8, 2022</p>
-        <span class="article-text">
-            <p> <a href="/download/applications" class="more">View downloads</a></p>
-            <il>
-                <p><a href="/go/?id=xcode-14-sdk-rn" class="more">View release notes</a></p>
-            </il>
-        </span>
-    </div>
-    <section class="social-share-container">
-        <ul class="sharesheet-options">
-            <li class="social-option">
-                <button class="icon icon-facebook social-icon" data-href="https://developer.apple.com/news/releases/?id=08082022a" data-share-type="facebook" aria-label="Share via Facebook"> </button>
-            </li>
-            <li class="social-option">
-                <button class="icon icon-twitter social-icon" data-href="https://developer.apple.com/news/releases/?id=08082022a" data-share-type="twitter" aria-label="Share via Twitter"></button>
-            </li>
-            <li class="social-option">
-                <button class="icon icon-mail social-icon" data-href="https://developer.apple.com/news/releases/?id=08082022a" data-share-type="mail" data-title="Xcode 14 beta 5 (14A5294e) - Releases - Apple Developer" data-description="https://developer.apple.com/news/releases/?id=08082022a" aria-label="Share via mail"></button>
-            </li>
-            <li class="social-option">
-                <button class="icon icon-link social-icon" data-href="https://developer.apple.com/news/releases/?id=08082022a" data-share-type="copy" data-copy-title="Copied to clipboard" aria-label="Share via link"></button>
-            </li>
-        </ul>
-    </section>
-</section>
-    "###.to_string();
-
-    let articles = find_articles(html).expect("Err collecting articles");
-    assert_eq!(articles.len(), 1);
-}
-
-#[test]
-fn test_parse_title() {
-    let html = r###"
-    <a class="article-title external-link" href="/download/"><h2>Xcode 14 beta 5 (14A5294e)</h2></a>
-    "###.to_string();
-
-    let fragment = Html::parse_fragment(&html);
-
-    // test parsing using local selector
-    let selector = Selector::parse(r#"a.article-title h2"#).unwrap();
-    let element = fragment.select(&selector).next().unwrap();
-    println!("{}", element.inner_html());
-
-    let title = parse_article_title(&fragment.root_element(), &SELECTORS.title).unwrap();
-
-    assert_eq!(title, "Xcode 14 beta 5 (14A5294e)");
-}
-
-#[test]
-fn test_parse_date() {
-    let html = r###"
-        <p class="lighter  article-date">August 8, 2022</p>
-    "###.to_string();
-
-    let fragment = Html::parse_fragment(&html);
-
-    // test parsing using local selector
-    let selector = Selector::parse(r#"p.article-date"#).unwrap();
-    let element = fragment.select(&selector).next().unwrap();
-    println!("{}", element.inner_html());
-
-    let date = parse_article_date(&fragment.root_element(), &SELECTORS.date).unwrap();
-
-    assert_eq!(date, "August 8, 2022");
-}
-
-#[test]
-fn test_parse_release_notes_link() {
-    let html = r###"
-        <span class="article-text">
-            <p> <a href="/download/applications" class="more">View downloads</a></p>
-            <il>
-                <p><a href="/go/?id=xcode-14-sdk-rn" class="more">View release notes</a></p>
-            </il>
-        </span>
-    "###.to_string();
-
-    let fragment = Html::parse_fragment(&html);
-
-    // test parsing using local selector
-    let selector = Selector::parse(r#"span.article-text il a.more"#).unwrap();
-    let element = fragment.select(&selector).next().unwrap().value();
-        // .ok_or("No href attribute found")?
-        // .to_string()
-    println!("{}", element.attr("href").unwrap());
-
-    let notes_url = parse_release_notes_link(&fragment.root_element(), &SELECTORS.release_notes_short_url).unwrap();
-
-    assert_eq!(notes_url, "/go/?id=xcode-14-sdk-rn");
-}
-
-#[test]
-fn test_build_notes_url() {
-    let expected_url = Url::parse("https://developer.apple.com/go/?id=xcode-14-sdk-rn").unwrap();
-    let path = Some("/go/?id=xcode-14-sdk-rn".to_string());
-    let url = build_notes_url(path).unwrap();
-    assert_eq!(url, expected_url);
-}
-
-#[test]
-fn test_build_notes_url_with_none() {
-    let expected_url = None;
-    let url = build_notes_url(None);
-    assert_eq!(url, expected_url);
-}
-
-#[test]
-fn test_article_display() {
-    let article = Article {
-        title: "iOS 16.2 beta 3 (20C5049e)".to_string(),
-        date: "November 15, 2022".to_string(),
-        release_notes_url: Url::parse("https://developer.apple.com/go/?id=ios-16.2-rn").ok(),
-    };
-
-    assert_eq!(
-        article.to_string(),
-        "November 15, 2022 - iOS 16.2 beta 3 (20C5049e), <https://developer.apple.com/go/?id=ios-16.2-rn>"
-    );
-}
-
-#[test]
-fn test_article_display_without_url() {
-    let article = Article {
-        title: "App Store Connect 1.11".to_string(),
-        date: "November 15, 2022".to_string(),
-        release_notes_url: None,
-    };
-
-    assert_eq!(
-        article.to_string(),
-        "November 15, 2022 - App Store Connect 1.11, <>"
-    );
 }
