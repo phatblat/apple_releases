@@ -26,8 +26,7 @@ pub fn parse_articles(content: String) -> GenericResult<Vec<Article>> {
         let notes = parse_release_notes_link(&container, &SELECTORS.release_notes_short_url);
         let notes_url = crate::url::build_notes_url(notes)
             // Ignore Transporter app store links
-            .filter(|url| url.as_str().contains("developer.apple.com"))
-            .map(|url| crate::url::unfurl(url).unwrap());
+            .filter(|url| url.as_str().contains("developer.apple.com"));
 
         // TODO: Log debug
         // let url = notes_url.as_ref().map_or(None, |url| Some(url.to_string()));

@@ -37,7 +37,7 @@ pub fn get(url: String) -> GenericResult<String> {
 /// # Arguments
 ///
 /// - `url` - The URL at the end of a redirect chain.
-pub(crate) fn unfurl(url: Url) -> GenericResult<Url> {
+pub(crate) fn unfurl(url: &Url) -> GenericResult<Url> {
     let body = crate::url::get(url.to_string()).unwrap();
     let document = Html::parse_document(&body);
 

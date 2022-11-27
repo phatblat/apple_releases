@@ -12,10 +12,17 @@ pub struct Article {
     pub release_notes_url: Option<Url>,
 }
 
+impl Article {
+    /// Creates a new article.
+    pub fn release_notes_url_unfurled(&self) -> Option<Url> {
+        self.release_notes_url.as_ref()
+            .map(|url| crate::url::unfurl(url).unwrap())
+    }
+}
+
 impl Display for Article {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let url = self.release_notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
-        write!(f, "{} - {}, <{}>", self.date, self.title, url.unwrap_or_default())
+        write!(f, "{} - {}", self.date, self.title)
     }
 }
 
