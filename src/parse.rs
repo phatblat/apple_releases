@@ -2,6 +2,7 @@
 //! parse.rs
 //!
 
+use chrono::NaiveDate;
 use scraper::{ElementRef, Html, Selector};
 
 use crate::article::Article;
@@ -65,12 +66,16 @@ pub fn parse_article_title(element: &ElementRef, selector: &Selector) -> Generic
 /// - `element` - The HTML ElementRef to parse.
 /// - `selector` - The selector to use.
 pub fn parse_article_date(element: &ElementRef, selector: &Selector) -> GenericResult<String> {
+    let date_string = element
+        .select(selector)
+        .next()
+        .ok_or("No date found")?
+        .inner_html();
+
+    let date_only = NaiveDate::parse_from_str(date_string.as_str(), "%B %d, %Y")?;
+
     Ok(
-        element
-            .select(selector)
-            .next()
-            .ok_or("No date found")?
-            .inner_html(),
+        date_only.format("%Y-%m-%d").to_string()
     )
 }
 
