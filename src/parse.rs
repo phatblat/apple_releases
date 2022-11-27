@@ -1,4 +1,9 @@
+//!
+//! parse.rs
+//!
+
 use scraper::{ElementRef, Html, Selector};
+
 use crate::article::Article;
 use crate::{GenericResult, parse, SELECTORS};
 
