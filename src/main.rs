@@ -4,14 +4,13 @@
 
 use std::string::ToString;
 use lazy_static::lazy_static;
-use scraper::{ElementRef, Html, Selector};
 
-use crate::article::Article;
 use crate::selectors::Selectors;
 
 mod article;
 mod selectors;
 mod url;
+mod parse;
 
 /* ---------------------------------------------------------------------------------------------- */
 
@@ -34,7 +33,7 @@ lazy_static! {
 fn main() {
     let body = url::get(APPLE_DEV_RELEASES.to_string()).unwrap();
 
-    let articles = parse_articles(body).unwrap();
+    let articles = parse::parse_articles(body).unwrap();
 
     articles.iter().for_each(|article| {
         println!("{}", article);
@@ -42,93 +41,6 @@ fn main() {
 }
 
 /* ---------------------------------------------------------------------------------------------- */
-
-/// Finds articles in the HTML.
-///
-/// # Arguments
-///
-/// - `content` - The HTML to parse.
-///
-/// # Returns
-///
-/// A list of articles.
-fn parse_articles(content: String) -> GenericResult<Vec<Article>> {
-    let document = Html::parse_document(&content);
-    let mut articles: Vec<Article> = Vec::new();
-
-    for container in document.select(&SELECTORS.article) {
-        let title = parse_article_title(&container, &SELECTORS.title).expect("title");
-        let date = parse_article_date(&container, &SELECTORS.date).expect("date");
-        let notes = parse_release_notes_link(&container, &SELECTORS.release_notes_short_url);
-        let notes_url = crate::url::build_notes_url(notes)
-            // Ignore Transporter app store links
-            .filter(|url| url.as_str().contains("developer.apple.com"))
-            .map(|url| crate::url::unfurl(url).unwrap());
-
-        // TODO: Log debug
-        // let url = notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
-        // println!("{} - {}, <{}>", date, title, url.unwrap_or_default());
-
-        articles.push(Article {
-            title,
-            date,
-            release_notes_url: notes_url,
-        });
-    }
-
-    Ok(articles)
-}
-
-/// Parses the article title.
-///
-/// # Arguments
-///
-/// - `element` - The HTML ElementRef to parse.
-/// - `selector` - The selector to use.
-fn parse_article_title(element: &ElementRef, selector: &Selector) -> GenericResult<String> {
-    Ok(
-        element
-            .select(selector)
-            .next()
-            .ok_or("No title found")?
-            .inner_html(),
-    )
-}
-
-/// Parses the article date.
-///
-/// # Arguments
-///
-/// - `element` - The HTML ElementRef to parse.
-/// - `selector` - The selector to use.
-fn parse_article_date(element: &ElementRef, selector: &Selector) -> GenericResult<String> {
-    Ok(
-        element
-            .select(selector)
-            .next()
-            .ok_or("No date found")?
-            .inner_html(),
-    )
-}
-
-/// Parses the release notes link.
-///
-/// # Arguments
-///
-/// - `element` - The HTML ElementRef to parse.
-/// - `selector` - The selector to use.
-fn parse_release_notes_link(element: &ElementRef, selector: &Selector) -> Option<String> {
-    match element
-            .select(selector)
-            .next()
-            .ok_or("No release notes link found")
-            .ok()?
-            .value()
-            .attr("href") {
-        Some(url) => Some(url.to_string()),
-        None => None,
-    }
-}
 
 /* ---------------------------------------------------------------------------------------------- */
 
@@ -169,7 +81,7 @@ fn test_parse_redirect_script() {
     let element = fragment.select(&selector).next().unwrap();
     println!("{}", element.inner_html());
 
-    let script = parse_article_title(&fragment.root_element(), &SELECTORS.release_notes_full_url)
+    let script = parse::parse_article_title(&fragment.root_element(), &SELECTORS.release_notes_full_url)
         .unwrap();
 
     assert_eq!(
@@ -219,7 +131,7 @@ fn test_parse() {
 </section>
     "###.to_string();
 
-    let articles = parse_articles(html).expect("Err collecting articles");
+    let articles = parse::parse_articles(html).expect("Err collecting articles");
     assert_eq!(articles.len(), 1);
 }
 
@@ -236,7 +148,7 @@ fn test_parse_title() {
     let element = fragment.select(&selector).next().unwrap();
     println!("{}", element.inner_html());
 
-    let title = parse_article_title(&fragment.root_element(), &SELECTORS.title).unwrap();
+    let title = parse::parse_article_title(&fragment.root_element(), &SELECTORS.title).unwrap();
 
     assert_eq!(title, "Xcode 14 beta 5 (14A5294e)");
 }
@@ -254,7 +166,7 @@ fn test_parse_date() {
     let element = fragment.select(&selector).next().unwrap();
     println!("{}", element.inner_html());
 
-    let date = parse_article_date(&fragment.root_element(), &SELECTORS.date).unwrap();
+    let date = parse::parse_article_date(&fragment.root_element(), &SELECTORS.date).unwrap();
 
     assert_eq!(date, "August 8, 2022");
 }
@@ -279,7 +191,7 @@ fn test_parse_release_notes_link() {
         // .to_string()
     println!("{}", element.attr("href").unwrap());
 
-    let notes_url = parse_release_notes_link(&fragment.root_element(), &SELECTORS.release_notes_short_url).unwrap();
+    let notes_url = parse::parse_release_notes_link(&fragment.root_element(), &SELECTORS.release_notes_short_url).unwrap();
 
     assert_eq!(notes_url, "/go/?id=xcode-14-sdk-rn");
 }
