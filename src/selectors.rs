@@ -1,3 +1,7 @@
+//!
+//! selectors.rs
+//!
+
 use scraper::Selector;
 
 /// Collection of scraper Selectors - https://docs.rs/scraper/latest/scraper/

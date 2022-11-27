@@ -5,13 +5,13 @@
 use std::string::ToString;
 use lazy_static::lazy_static;
 use scraper::{ElementRef, Html, Selector};
-use url::Url;
 
 use crate::article::Article;
 use crate::selectors::Selectors;
 
 mod article;
 mod selectors;
+mod url;
 
 /* ---------------------------------------------------------------------------------------------- */
 
@@ -32,9 +32,9 @@ lazy_static! {
 
 /// Executable entry point.
 fn main() {
-    let body = get(APPLE_DEV_RELEASES.to_string()).unwrap();
+    let body = url::get(APPLE_DEV_RELEASES.to_string()).unwrap();
 
-    let articles = find_articles(body).unwrap();
+    let articles = parse_articles(body).unwrap();
 
     articles.iter().for_each(|article| {
         println!("{}", article);
@@ -52,7 +52,7 @@ fn main() {
 /// # Returns
 ///
 /// A list of articles.
-fn find_articles(content: String) -> GenericResult<Vec<Article>> {
+fn parse_articles(content: String) -> GenericResult<Vec<Article>> {
     let document = Html::parse_document(&content);
     let mut articles: Vec<Article> = Vec::new();
 
@@ -60,10 +60,10 @@ fn find_articles(content: String) -> GenericResult<Vec<Article>> {
         let title = parse_article_title(&container, &SELECTORS.title).expect("title");
         let date = parse_article_date(&container, &SELECTORS.date).expect("date");
         let notes = parse_release_notes_link(&container, &SELECTORS.release_notes_short_url);
-        let notes_url = build_notes_url(notes)
+        let notes_url = crate::url::build_notes_url(notes)
             // Ignore Transporter app store links
             .filter(|url| url.as_str().contains("developer.apple.com"))
-            .map(|url| unfurl(url).unwrap());
+            .map(|url| crate::url::unfurl(url).unwrap());
 
         // TODO: Log debug
         // let url = notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
@@ -77,85 +77,6 @@ fn find_articles(content: String) -> GenericResult<Vec<Article>> {
     }
 
     Ok(articles)
-}
-
-/// Gets a URL and returns the body of the response.
-///
-/// # Arguments
-///
-/// - `url` - The URL to get.
-fn get(url: String) -> GenericResult<String> {
-    let client = reqwest::blocking::Client::builder()
-        .user_agent(APP_USER_AGENT)
-        .build()?;
-    let res = client.get(url).send()?;
-    // println!("{:#?}", res);
-
-    let body = res.text()?;
-    // println!("{}", body);
-
-    Ok(body)
-}
-
-/// Unfurls a release notes URL. These URLs use in-page JavaScript to redirect to the actual URL.
-///
-/// ```
-/// <script>
-/// window.setTimeout("window.location.replace('/documentation/ios-ipados-release-notes/ios-ipados-16_2-release-notes')", 1);
-/// </script>
-/// ```
-///
-/// # Arguments
-///
-/// - `url` - The URL at the end of a redirect chain.
-fn unfurl(url: Url) -> GenericResult<Url> {
-    let body = get(url.to_string()).unwrap();
-    let document = Html::parse_document(&body);
-
-    let script = parse_article_title(&document.root_element(), &SELECTORS.release_notes_full_url)
-        .unwrap();
-
-    let tokens = script.split("'");
-    let path = tokens.take(2).last().unwrap();
-
-    // TODO: Log debug
-    // println!("{:?}", path);
-
-    let releases_url = Url::parse(APPLE_DEV_RELEASES).unwrap();
-    let base = base_url(releases_url).unwrap();
-    let full_url = base.join(path).unwrap();
-
-    // TODO: Log debug
-    // println!("{}", full_url);
-
-    Ok(full_url)
-}
-
-fn base_url(mut url: Url) -> GenericResult<Url> {
-    match url.path_segments_mut() {
-        Ok(mut path) => {
-            path.clear();
-        }
-        Err(_) => {
-            return Err(GenericError::try_from("Error extracting base URL").unwrap());
-        }
-    }
-
-    url.set_query(None);
-
-    Ok(url)
-}
-
-/// Builds the release notes URL.
-///
-/// # Arguments
-///
-/// - `notes` - The release notes path.
-fn build_notes_url(notes_path: Option<String>) -> Option<Url> {
-    notes_path.map(|path| {
-        let base_url = Url::parse(APPLE_DEV_RELEASES).unwrap();
-        base_url.join(&path).unwrap()
-    })
 }
 
 /// Parses the article title.
@@ -213,7 +134,7 @@ fn parse_release_notes_link(element: &ElementRef, selector: &Selector) -> Option
 
 #[test]
 fn test_get() {
-    let body = get(APPLE_DEV_RELEASES.to_string()).unwrap();
+    let body = url::get(APPLE_DEV_RELEASES.to_string()).unwrap();
     assert!(body.len() > 0);
 }
 
@@ -298,7 +219,7 @@ fn test_parse() {
 </section>
     "###.to_string();
 
-    let articles = find_articles(html).expect("Err collecting articles");
+    let articles = parse_articles(html).expect("Err collecting articles");
     assert_eq!(articles.len(), 1);
 }
 
