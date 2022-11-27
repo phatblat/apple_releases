@@ -35,6 +35,7 @@ lazy_static! {
 fn main() {
     let args = cli().get_matches();
     let show_all = args.get_one::<bool>("all").unwrap();
+    let unfurl_urls = args.get_one::<bool>("unfurl").unwrap();
 
     let body = url::get(APPLE_DEV_RELEASES.to_string()).unwrap();
 
@@ -43,7 +44,12 @@ fn main() {
     articles.iter().for_each(|article| {
         match article.release_notes_url {
             Some(_) => {
-                println!("{}", article);
+                print!("{}", article);
+                if *unfurl_urls {
+                    println!(" - {}", article.release_notes_url_unfurled().unwrap());
+                } else {
+                    println!(" - {}", article.release_notes_url.as_ref().unwrap());
+                }
             }
             _ => {
                 if *show_all {

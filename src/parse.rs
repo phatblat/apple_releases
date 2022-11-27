@@ -26,8 +26,7 @@ pub fn parse_articles(content: String) -> GenericResult<Vec<Article>> {
         let notes = parse_release_notes_link(&container, &SELECTORS.release_notes_short_url);
         let notes_url = crate::url::build_notes_url(notes)
             // Ignore Transporter app store links
-            .filter(|url| url.as_str().contains("developer.apple.com"))
-            .map(|url| crate::url::unfurl(url).unwrap());
+            .filter(|url| url.as_str().contains("developer.apple.com"));
 
         // TODO: Log debug
         // let url = notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
@@ -129,7 +128,7 @@ fn test_parse() {
 </section>
     "###.to_string();
 
-    let articles = parse::parse_articles(html).expect("Err collecting articles");
+    let articles = parse_articles(html).expect("Err collecting articles");
     assert_eq!(articles.len(), 1);
 }
 
@@ -146,7 +145,7 @@ fn test_parse_title() {
     let element = fragment.select(&selector).next().unwrap();
     println!("{}", element.inner_html());
 
-    let title = parse::parse_article_title(&fragment.root_element(), &SELECTORS.title).unwrap();
+    let title = parse_article_title(&fragment.root_element(), &SELECTORS.title).unwrap();
 
     assert_eq!(title, "Xcode 14 beta 5 (14A5294e)");
 }
@@ -164,7 +163,7 @@ fn test_parse_date() {
     let element = fragment.select(&selector).next().unwrap();
     println!("{}", element.inner_html());
 
-    let date = parse::parse_article_date(&fragment.root_element(), &SELECTORS.date).unwrap();
+    let date = parse_article_date(&fragment.root_element(), &SELECTORS.date).unwrap();
 
     assert_eq!(date, "August 8, 2022");
 }
@@ -189,7 +188,7 @@ fn test_parse_release_notes_link() {
     // .to_string()
     println!("{}", element.attr("href").unwrap());
 
-    let notes_url = parse::parse_release_notes_link(&fragment.root_element(), &SELECTORS.release_notes_short_url).unwrap();
+    let notes_url = parse_release_notes_link(&fragment.root_element(), &SELECTORS.release_notes_short_url).unwrap();
 
     assert_eq!(notes_url, "/go/?id=xcode-14-sdk-rn");
 }
