@@ -18,3 +18,33 @@ impl Display for Article {
         write!(f, "{} - {}, <{}>", self.date, self.title, url.unwrap_or_default())
     }
 }
+
+/* ---------------------------------------------------------------------------------------------- */
+
+#[test]
+fn test_article_display() {
+    let article = Article {
+        title: "iOS 16.2 beta 3 (20C5049e)".to_string(),
+        date: "November 15, 2022".to_string(),
+        release_notes_url: Url::parse("https://developer.apple.com/go/?id=ios-16.2-rn").ok(),
+    };
+
+    assert_eq!(
+        article.to_string(),
+        "November 15, 2022 - iOS 16.2 beta 3 (20C5049e), <https://developer.apple.com/go/?id=ios-16.2-rn>"
+    );
+}
+
+#[test]
+fn test_article_display_without_url() {
+    let article = Article {
+        title: "App Store Connect 1.11".to_string(),
+        date: "November 15, 2022".to_string(),
+        release_notes_url: None,
+    };
+
+    assert_eq!(
+        article.to_string(),
+        "November 15, 2022 - App Store Connect 1.11, <>"
+    );
+}

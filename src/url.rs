@@ -2,9 +2,9 @@
 //! url.rs
 //!
 
-use scraper::Html;
+use scraper::{Html, Selector};
 use url::Url;
-use crate::{APP_USER_AGENT, APPLE_DEV_RELEASES, GenericError, GenericResult, SELECTORS};
+use crate::{APP_USER_AGENT, APPLE_DEV_RELEASES, GenericError, GenericResult, parse, SELECTORS};
 use crate::parse::parse_article_title;
 
 /// Gets a URL and returns the body of the response.
@@ -89,4 +89,67 @@ pub(crate) fn build_notes_url(notes_path: Option<String>) -> Option<Url> {
         let base_url = Url::parse(APPLE_DEV_RELEASES).unwrap();
         base_url.join(&path).unwrap()
     })
+}
+
+/* ---------------------------------------------------------------------------------------------- */
+
+#[test]
+fn test_get() {
+    let body = crate::url::get(APPLE_DEV_RELEASES.to_string()).unwrap();
+    assert!(body.len() > 0);
+}
+
+#[test]
+fn test_build_notes_url() {
+    let expected_url = Url::parse("https://developer.apple.com/go/?id=xcode-14-sdk-rn").unwrap();
+    let path = Some("/go/?id=xcode-14-sdk-rn".to_string());
+    let url = build_notes_url(path).unwrap();
+    assert_eq!(url, expected_url);
+}
+
+#[test]
+fn test_build_notes_url_with_none() {
+    let expected_url = None;
+    let url = build_notes_url(None);
+    assert_eq!(url, expected_url);
+}
+
+#[test]
+fn test_parse_redirect_script() {
+    let html = r###"
+    <!-- metrics -->
+    <script>
+        /* RSID: */
+        var s_account="awdappledeveloper"
+    </script>
+    <script src="/assets/metrics/scripts/analytics.js?10202020"></script>
+    <script>
+        s.pageName= AC && AC.Tracking && AC.Tracking.pageName();
+        s.channel="www.en.developer"
+        s.channel="www.en.developer";
+
+
+        /************* DO NOT ALTER ANYTHING BELOW THIS LINE ! **************/
+        var s_code=s.t();if(s_code)document.write(s_code)
+    </script>
+    <!-- /metrics -->
+    <script>
+    window.setTimeout("window.location.replace('/documentation/ios-ipados-release-notes/ios-ipados-16_2-release-notes')", 1);
+    </script>
+    "###.to_string();
+
+    let fragment = Html::parse_fragment(&html);
+
+    // test parsing using local selector
+    let selector = Selector::parse(r#"script + script + script + script"#).unwrap();
+    let element = fragment.select(&selector).next().unwrap();
+    println!("{}", element.inner_html());
+
+    let script = parse::parse_article_title(&fragment.root_element(), &SELECTORS.release_notes_full_url)
+        .unwrap();
+
+    assert_eq!(
+        script.trim(),
+        r#"window.setTimeout("window.location.replace('/documentation/ios-ipados-release-notes/ios-ipados-16_2-release-notes')", 1);"#
+    );
 }
