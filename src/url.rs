@@ -5,7 +5,7 @@
 use scraper::Html;
 use url::Url;
 
-use crate::{APP_USER_AGENT, APPLE_DEV_RELEASES, GenericError, GenericResult, parse, SELECTORS};
+use crate::{APP_USER_AGENT, APPLE_DEV_RELEASES, GenericError, GenericResult, SELECTORS};
 use crate::parse::parse_article_title;
 
 /// Gets a URL and returns the body of the response.

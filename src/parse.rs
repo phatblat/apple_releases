@@ -5,7 +5,7 @@
 use scraper::{ElementRef, Html, Selector};
 
 use crate::article::Article;
-use crate::{GenericResult, parse, SELECTORS};
+use crate::{GenericResult, SELECTORS};
 
 /// Finds articles in the HTML.
 ///

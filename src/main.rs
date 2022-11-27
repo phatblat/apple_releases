@@ -5,6 +5,7 @@
 use std::string::ToString;
 use lazy_static::lazy_static;
 
+use crate::cli::cli;
 use crate::selectors::Selectors;
 
 mod article;
@@ -32,11 +33,23 @@ lazy_static! {
 
 /// Executable entry point.
 fn main() {
+    let args = cli().get_matches();
+    let show_all = args.get_one::<bool>("all").unwrap();
+
     let body = url::get(APPLE_DEV_RELEASES.to_string()).unwrap();
 
     let articles = parse::parse_articles(body).unwrap();
 
     articles.iter().for_each(|article| {
-        println!("{}", article);
+        match article.release_notes_url {
+            Some(_) => {
+                println!("{}", article);
+            }
+            _ => {
+                if *show_all {
+                    println!("{}", article);
+                }
+            }
+        }
     });
 }
