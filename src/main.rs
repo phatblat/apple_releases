@@ -3,18 +3,15 @@
 //!
 
 use std::string::ToString;
-use ::url::Url;
 use lazy_static::lazy_static;
-use scraper::{Html, Selector};
-use crate::article::Article;
 
 use crate::selectors::Selectors;
-use crate::url::{build_notes_url, unfurl};
 
 mod article;
+mod cli;
+mod parse;
 mod selectors;
 mod url;
-mod parse;
 
 /* ---------------------------------------------------------------------------------------------- */
 

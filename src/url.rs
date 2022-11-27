@@ -2,7 +2,7 @@
 //! url.rs
 //!
 
-use scraper::{Html, Selector};
+use scraper::Html;
 use url::Url;
 use crate::{APP_USER_AGENT, APPLE_DEV_RELEASES, GenericError, GenericResult, parse, SELECTORS};
 use crate::parse::parse_article_title;
