@@ -146,7 +146,7 @@ fn test_parse_redirect_script() {
     let element = fragment.select(&selector).next().unwrap();
     println!("{}", element.inner_html());
 
-    let script = parse::parse_article_title(&fragment.root_element(), &SELECTORS.release_notes_full_url)
+    let script = parse_article_title(&fragment.root_element(), &SELECTORS.release_notes_full_url)
         .unwrap();
 
     assert_eq!(
