@@ -5,8 +5,8 @@
 use scraper::Html;
 use url::Url;
 
-use crate::{APP_USER_AGENT, APPLE_DEV_RELEASES, GenericError, GenericResult, SELECTORS};
 use crate::parse::parse_article_title;
+use crate::{GenericError, GenericResult, APPLE_DEV_RELEASES, APP_USER_AGENT, SELECTORS};
 
 /// Gets a URL and returns the body of the response.
 ///
@@ -38,11 +38,11 @@ pub fn get(url: String) -> GenericResult<String> {
 ///
 /// - `url` - The URL at the end of a redirect chain.
 pub(crate) fn unfurl(url: &Url) -> GenericResult<Url> {
-    let body = crate::url::get(url.to_string()).unwrap();
+    let body = get(url.to_string()).unwrap();
     let document = Html::parse_document(&body);
 
-    let script = parse_article_title(&document.root_element(), &SELECTORS.release_notes_full_url)
-        .unwrap();
+    let script =
+        parse_article_title(&document.root_element(), &SELECTORS.release_notes_full_url).unwrap();
 
     let tokens = script.split("'");
     let path = tokens.take(2).last().unwrap();
@@ -96,7 +96,7 @@ pub(crate) fn build_notes_url(notes_path: Option<String>) -> Option<Url> {
 
 #[test]
 fn test_get() {
-    let body = crate::url::get(APPLE_DEV_RELEASES.to_string()).unwrap();
+    let body = get(APPLE_DEV_RELEASES.to_string()).unwrap();
     assert!(body.len() > 0);
 }
 
@@ -142,12 +142,12 @@ fn test_parse_redirect_script() {
     let fragment = Html::parse_fragment(&html);
 
     // test parsing using local selector
-    let selector = Selector::parse(r#"script + script + script + script"#).unwrap();
+    let selector = scraper::Selector::parse(r#"script + script + script + script"#).unwrap();
     let element = fragment.select(&selector).next().unwrap();
     println!("{}", element.inner_html());
 
-    let script = parse_article_title(&fragment.root_element(), &SELECTORS.release_notes_full_url)
-        .unwrap();
+    let script =
+        parse_article_title(&fragment.root_element(), &SELECTORS.release_notes_full_url).unwrap();
 
     assert_eq!(
         script.trim(),

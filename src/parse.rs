@@ -86,16 +86,14 @@ pub fn parse_article_date(element: &ElementRef, selector: &Selector) -> GenericR
 /// - `element` - The HTML ElementRef to parse.
 /// - `selector` - The selector to use.
 pub fn parse_release_notes_link(element: &ElementRef, selector: &Selector) -> Option<String> {
-    match element
-            .select(selector)
-            .next()
-            .ok_or("No release notes link found")
-            .ok()?
-            .value()
-            .attr("href") {
-        Some(url) => Some(url.to_string()),
-        None => None,
-    }
+    element
+        .select(selector)
+        .next()
+        .ok_or("No release notes link found")
+        .ok()?
+        .value()
+        .attr("href")
+        .map(|url| url.to_string())
 }
 
 /* ---------------------------------------------------------------------------------------------- */
