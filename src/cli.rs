@@ -2,8 +2,6 @@
 //! cli.rs
 //!
 
-extern crate clap;
-
 use clap::{Arg, ArgAction, Command};
 
 /// Parses command line arguments.
@@ -12,22 +10,26 @@ pub(crate) fn cli() -> Command {
         .about("CLI for the Apple Developer News RSS feed")
         .version("0.1.0")
         .author("Ben Chatelain")
-        .arg( // --all
+        .arg(
+            // --all
             Arg::new("all")
                 .long("all")
                 .short('a')
                 .help("Show all releases")
-                .action(ArgAction::SetTrue)
+                .action(ArgAction::SetTrue),
         )
-        .arg( // --unfurl
+        .arg(
+            // --unfurl
             Arg::new("unfurl")
                 .long("unfurl")
                 .short('u')
                 .help("Unfurl release note URLs")
                 .action(ArgAction::SetTrue),
         )
-        .after_help("Longer explanation to appear after the options when \
-                 displaying the help information from --help or -h")
+        .after_help(
+            "Longer explanation to appear after the options when \
+                 displaying the help information from --help or -h",
+        )
 }
 
 /* ---------------------------------------------------------------------------------------------- */
