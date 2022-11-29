@@ -48,7 +48,7 @@ fn test_article_display() {
 
     assert_eq!(
         article.to_string(),
-        "November 15, 2022 - iOS 16.2 beta 3 (20C5049e), <https://developer.apple.com/go/?id=ios-16.2-rn>"
+        "2022-11-15 - iOS 16.2 beta 3 (20C5049e)"
     );
 }
 
@@ -60,8 +60,5 @@ fn test_article_display_without_url() {
         release_notes_url: None,
     };
 
-    assert_eq!(
-        article.to_string(),
-        "November 15, 2022 - App Store Connect 1.11, <>"
-    );
+    assert_eq!(article.to_string(), "2022-11-15 - App Store Connect 1.11");
 }
