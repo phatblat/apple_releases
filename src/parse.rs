@@ -63,16 +63,17 @@ pub fn parse_article_title(element: &ElementRef, selector: &Selector) -> Generic
 ///
 /// - `element` - The HTML ElementRef to parse.
 /// - `selector` - The selector to use.
-pub fn parse_article_date(element: &ElementRef, selector: &Selector) -> GenericResult<String> {
+pub fn parse_article_date(element: &ElementRef, selector: &Selector) -> GenericResult<NaiveDate> {
     let date_string = element
         .select(selector)
         .next()
         .ok_or("No date found")?
         .inner_html();
 
-    let date_only = NaiveDate::parse_from_str(date_string.as_str(), "%B %d, %Y")?;
-
-    Ok(date_only.format("%Y-%m-%d").to_string())
+    Ok(NaiveDate::parse_from_str(
+        date_string.as_str(),
+        "%B %d, %Y",
+    )?)
 }
 
 /// Parses the release notes link.
@@ -165,8 +166,9 @@ fn test_parse_date() {
     println!("{}", element.inner_html());
 
     let date = parse_article_date(&fragment.root_element(), &SELECTORS.date).unwrap();
+    let expected_date = NaiveDate::parse_from_str("August 8, 2022", "%B %d, %Y").unwrap();
 
-    assert_eq!(date, "August 8, 2022");
+    assert_eq!(date, expected_date);
 }
 
 #[test]

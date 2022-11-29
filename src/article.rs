@@ -3,6 +3,8 @@
 //!
 
 use std::fmt::{Display, Formatter};
+
+use chrono::NaiveDate;
 use url::Url;
 
 /// An article from the Apple Developer software releases site.
@@ -12,7 +14,7 @@ pub struct Article {
     pub title: String,
 
     /// The article date. Example: November 15, 2022
-    pub date: String,
+    pub date: NaiveDate,
 
     /// The release notes URL. This will be `None` if the article does not have release notes.
     /// Release note URLs end in a path like `/go/?id=ios-16.2-rn`
@@ -32,7 +34,12 @@ impl Article {
 
 impl Display for Article {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} - {}", self.date, self.title)
+        write!(
+            f,
+            "{} - {}",
+            self.date.format("%Y-%m-%d").to_string(),
+            self.title
+        )
     }
 }
 
@@ -40,9 +47,10 @@ impl Display for Article {
 
 #[test]
 fn test_article_display() {
+    let date = NaiveDate::parse_from_str("November 15, 2022", "%B %d, %Y").unwrap();
     let article = Article {
         title: "iOS 16.2 beta 3 (20C5049e)".to_string(),
-        date: "November 15, 2022".to_string(),
+        date,
         release_notes_url: Url::parse("https://developer.apple.com/go/?id=ios-16.2-rn").ok(),
     };
 
@@ -54,9 +62,10 @@ fn test_article_display() {
 
 #[test]
 fn test_article_display_without_url() {
+    let date = NaiveDate::parse_from_str("November 15, 2022", "%B %d, %Y").unwrap();
     let article = Article {
         title: "App Store Connect 1.11".to_string(),
-        date: "November 15, 2022".to_string(),
+        date,
         release_notes_url: None,
     };
 
