@@ -50,13 +50,11 @@ pub fn parse_articles(content: String) -> GenericResult<Vec<Article>> {
 /// - `element` - The HTML ElementRef to parse.
 /// - `selector` - The selector to use.
 pub fn parse_article_title(element: &ElementRef, selector: &Selector) -> GenericResult<String> {
-    Ok(
-        element
-            .select(selector)
-            .next()
-            .ok_or("No title found")?
-            .inner_html(),
-    )
+    Ok(element
+        .select(selector)
+        .next()
+        .ok_or("No title found")?
+        .inner_html())
 }
 
 /// Parses the article date.
@@ -74,9 +72,7 @@ pub fn parse_article_date(element: &ElementRef, selector: &Selector) -> GenericR
 
     let date_only = NaiveDate::parse_from_str(date_string.as_str(), "%B %d, %Y")?;
 
-    Ok(
-        date_only.format("%Y-%m-%d").to_string()
-    )
+    Ok(date_only.format("%Y-%m-%d").to_string())
 }
 
 /// Parses the release notes link.
@@ -139,7 +135,8 @@ fn test_parse() {
 fn test_parse_title() {
     let html = r###"
     <a class="article-title external-link" href="/download/"><h2>Xcode 14 beta 5 (14A5294e)</h2></a>
-    "###.to_string();
+    "###
+    .to_string();
 
     let fragment = Html::parse_fragment(&html);
 
@@ -157,7 +154,8 @@ fn test_parse_title() {
 fn test_parse_date() {
     let html = r###"
         <p class="lighter  article-date">August 8, 2022</p>
-    "###.to_string();
+    "###
+    .to_string();
 
     let fragment = Html::parse_fragment(&html);
 
@@ -180,7 +178,8 @@ fn test_parse_release_notes_link() {
                 <p><a href="/go/?id=xcode-14-sdk-rn" class="more">View release notes</a></p>
             </il>
         </span>
-    "###.to_string();
+    "###
+    .to_string();
 
     let fragment = Html::parse_fragment(&html);
 
@@ -191,7 +190,9 @@ fn test_parse_release_notes_link() {
     // .to_string()
     println!("{}", element.attr("href").unwrap());
 
-    let notes_url = parse_release_notes_link(&fragment.root_element(), &SELECTORS.release_notes_short_url).unwrap();
+    let notes_url =
+        parse_release_notes_link(&fragment.root_element(), &SELECTORS.release_notes_short_url)
+            .unwrap();
 
     assert_eq!(notes_url, "/go/?id=xcode-14-sdk-rn");
 }

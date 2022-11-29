@@ -44,7 +44,7 @@ pub(crate) fn unfurl(url: &Url) -> GenericResult<Url> {
     let script =
         parse_article_title(&document.root_element(), &SELECTORS.release_notes_full_url).unwrap();
 
-    let tokens = script.split("'");
+    let tokens = script.split('\'');
     let path = tokens.take(2).last().unwrap();
 
     // TODO: Log debug
@@ -97,7 +97,7 @@ pub(crate) fn build_notes_url(notes_path: Option<String>) -> Option<Url> {
 #[test]
 fn test_get() {
     let body = get(APPLE_DEV_RELEASES.to_string()).unwrap();
-    assert!(body.len() > 0);
+    assert!(!body.is_empty());
 }
 
 #[test]
