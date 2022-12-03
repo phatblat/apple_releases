@@ -12,4 +12,5 @@ lazy_static = "1.4.0"
 lenient_semver = "0.4.2"
 reqwest = { version = "0.11", features = ["blocking", "json"] }
 scraper = "0.13.0"
+semver = "1.0.14"
 url = "2.3.1"
