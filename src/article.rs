@@ -7,6 +7,8 @@ use std::fmt::{Display, Formatter};
 use chrono::NaiveDate;
 use url::Url;
 
+use crate::software_release::SoftwareRelease;
+
 /// An article from the Apple Developer software releases site.
 pub struct Article {
     /// The article title. For an OS release, this is the OS version.
@@ -29,6 +31,11 @@ impl Article {
         self.release_notes_url
             .as_ref()
             .map(|url| crate::url::unfurl(url).unwrap())
+    }
+
+    /// Attempts to parse `title` as an software release with version.
+    pub fn software_release() -> Option<SoftwareRelease> {
+        None
     }
 }
 
