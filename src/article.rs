@@ -27,14 +27,14 @@ impl Article {
     /// "Unfurls" a releases notes URL to the final page URL. These aren't HTTP redirects,
     /// but rather in-page JavaScript redirects. The final URL path looks something like the
     /// following: `/documentation/ios-ipados-release-notes/ios-ipados-16_2-release-notes`.
-    pub fn release_notes_url_unfurled(&self) -> Option<Url> {
+    pub(crate) fn release_notes_url_unfurled(&self) -> Option<Url> {
         self.release_notes_url
             .as_ref()
             .map(|url| crate::url::unfurl(url).unwrap())
     }
 
     /// Attempts to parse `title` as an software release with version.
-    pub fn software_release() -> Option<SoftwareRelease> {
+    pub(crate) fn software_release() -> Option<SoftwareRelease> {
         None
     }
 }

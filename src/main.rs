@@ -12,6 +12,7 @@ use crate::selectors::Selectors;
 mod article;
 mod cli;
 mod parse;
+mod product;
 mod selectors;
 mod software_release;
 mod url;
