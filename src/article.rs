@@ -2,11 +2,16 @@
 //! article.rs
 //!
 
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr,
+};
 
 use chrono::NaiveDate;
+use semver::{BuildMetadata, Prerelease};
 use url::Url;
 
+use crate::product::Product;
 use crate::software_release::SoftwareRelease;
 
 /// An article from the Apple Developer software releases site.
@@ -33,9 +38,35 @@ impl Article {
             .map(|url| crate::url::unfurl(url).unwrap())
     }
 
-    /// Attempts to parse `title` as an software release with version.
-    pub(crate) fn software_release() -> Option<SoftwareRelease> {
-        None
+    /// Attempts to parse `title` as a software release with version.
+    #[allow(dead_code)]
+    pub(crate) fn software_release(&self) -> Option<SoftwareRelease> {
+        // iOS 16.2 beta 4 (20C5058d)
+        // iOS 16.1.2 (20B110)
+
+        let mut tokens = self.title.split(" ");
+        // for token in tokens {}
+        let product_name = tokens.next().unwrap();
+
+        Product::from_str(product_name)
+            .map(|product| {
+                let mut version_string = tokens.next().unwrap().to_string();
+                let mut tmp_string: &str = tokens.next().unwrap();
+                while !tmp_string.contains("(") {
+                    version_string = format!("{}-{}", version_string, tmp_string);
+                    tmp_string = tokens.next().unwrap();
+                }
+
+                if tmp_string.contains("(") {
+                    // Crop parentheses off both ends
+                    let build_string = &tmp_string[1..tmp_string.len() - 1];
+                    version_string = format!("{}+{}", version_string, build_string);
+                }
+
+                let version = lenient_semver::parse(&*version_string).unwrap();
+                Some(SoftwareRelease { product, version })
+            })
+            .unwrap_or(None)
     }
 }
 
@@ -77,4 +108,45 @@ fn test_article_display_without_url() {
     };
 
     assert_eq!(article.to_string(), "2022-11-15 - App Store Connect 1.11");
+}
+
+#[test]
+fn test_software_prerelease() {
+    let date = NaiveDate::parse_from_str("November 15, 2022", "%B %d, %Y").unwrap();
+    let article = Article {
+        title: "iOS 16.2 beta 3 (20C5049e)".to_string(),
+        date,
+        release_notes_url: None,
+    };
+
+    let release = article.software_release().unwrap();
+    assert_eq!(release.product, Product::iOS);
+    assert_eq!(release.version.major, 16);
+    assert_eq!(release.version.minor, 2);
+    assert_eq!(release.version.patch, 0);
+    assert_eq!(release.version.pre, Prerelease::new("beta-3").unwrap());
+    assert_eq!(
+        release.version.build,
+        BuildMetadata::new("20C5049e").unwrap()
+    );
+    assert_eq!(release.version.to_string(), "16.2.0-beta-3+20C5049e");
+}
+
+#[test]
+fn test_software_release() {
+    let date = NaiveDate::parse_from_str("November 15, 2022", "%B %d, %Y").unwrap();
+    let article = Article {
+        title: "iOS 16.1.2 (20B110)".to_string(),
+        date,
+        release_notes_url: None,
+    };
+
+    let release = article.software_release().unwrap();
+    assert_eq!(release.product, Product::iOS);
+    assert_eq!(release.version.major, 16);
+    assert_eq!(release.version.minor, 1);
+    assert_eq!(release.version.patch, 2);
+    assert_eq!(release.version.pre, Prerelease::new("").unwrap());
+    assert_eq!(release.version.build, BuildMetadata::new("20B110").unwrap());
+    assert_eq!(release.version.to_string(), "16.1.2+20B110");
 }
