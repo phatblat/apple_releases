@@ -39,7 +39,6 @@ impl Article {
     }
 
     /// Attempts to parse `title` as a software release with version.
-    #[allow(dead_code)]
     pub(crate) fn software_release(&self) -> Option<SoftwareRelease> {
         // iOS 16.2 beta 4 (20C5058d)
         // iOS 16.1.2 (20B110)
