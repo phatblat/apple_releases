@@ -50,13 +50,11 @@ pub fn parse_articles(content: String) -> GenericResult<Vec<Article>> {
 /// - `element` - The HTML ElementRef to parse.
 /// - `selector` - The selector to use.
 pub fn parse_article_title(element: &ElementRef, selector: &Selector) -> GenericResult<String> {
-    Ok(
-        element
-            .select(selector)
-            .next()
-            .ok_or("No title found")?
-            .inner_html(),
-    )
+    Ok(element
+        .select(selector)
+        .next()
+        .ok_or("No title found")?
+        .inner_html())
 }
 
 /// Parses the article date.
@@ -65,18 +63,17 @@ pub fn parse_article_title(element: &ElementRef, selector: &Selector) -> Generic
 ///
 /// - `element` - The HTML ElementRef to parse.
 /// - `selector` - The selector to use.
-pub fn parse_article_date(element: &ElementRef, selector: &Selector) -> GenericResult<String> {
+pub fn parse_article_date(element: &ElementRef, selector: &Selector) -> GenericResult<NaiveDate> {
     let date_string = element
         .select(selector)
         .next()
         .ok_or("No date found")?
         .inner_html();
 
-    let date_only = NaiveDate::parse_from_str(date_string.as_str(), "%B %d, %Y")?;
-
-    Ok(
-        date_only.format("%Y-%m-%d").to_string()
-    )
+    Ok(NaiveDate::parse_from_str(
+        date_string.as_str(),
+        "%B %d, %Y",
+    )?)
 }
 
 /// Parses the release notes link.
@@ -86,16 +83,14 @@ pub fn parse_article_date(element: &ElementRef, selector: &Selector) -> GenericR
 /// - `element` - The HTML ElementRef to parse.
 /// - `selector` - The selector to use.
 pub fn parse_release_notes_link(element: &ElementRef, selector: &Selector) -> Option<String> {
-    match element
-            .select(selector)
-            .next()
-            .ok_or("No release notes link found")
-            .ok()?
-            .value()
-            .attr("href") {
-        Some(url) => Some(url.to_string()),
-        None => None,
-    }
+    element
+        .select(selector)
+        .next()
+        .ok_or("No release notes link found")
+        .ok()?
+        .value()
+        .attr("href")
+        .map(|url| url.to_string())
 }
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -141,7 +136,8 @@ fn test_parse() {
 fn test_parse_title() {
     let html = r###"
     <a class="article-title external-link" href="/download/"><h2>Xcode 14 beta 5 (14A5294e)</h2></a>
-    "###.to_string();
+    "###
+    .to_string();
 
     let fragment = Html::parse_fragment(&html);
 
@@ -159,7 +155,8 @@ fn test_parse_title() {
 fn test_parse_date() {
     let html = r###"
         <p class="lighter  article-date">August 8, 2022</p>
-    "###.to_string();
+    "###
+    .to_string();
 
     let fragment = Html::parse_fragment(&html);
 
@@ -169,8 +166,9 @@ fn test_parse_date() {
     println!("{}", element.inner_html());
 
     let date = parse_article_date(&fragment.root_element(), &SELECTORS.date).unwrap();
+    let expected_date = NaiveDate::parse_from_str("August 8, 2022", "%B %d, %Y").unwrap();
 
-    assert_eq!(date, "August 8, 2022");
+    assert_eq!(date, expected_date);
 }
 
 #[test]
@@ -182,7 +180,8 @@ fn test_parse_release_notes_link() {
                 <p><a href="/go/?id=xcode-14-sdk-rn" class="more">View release notes</a></p>
             </il>
         </span>
-    "###.to_string();
+    "###
+    .to_string();
 
     let fragment = Html::parse_fragment(&html);
 
@@ -193,7 +192,9 @@ fn test_parse_release_notes_link() {
     // .to_string()
     println!("{}", element.attr("href").unwrap());
 
-    let notes_url = parse_release_notes_link(&fragment.root_element(), &SELECTORS.release_notes_short_url).unwrap();
+    let notes_url =
+        parse_release_notes_link(&fragment.root_element(), &SELECTORS.release_notes_short_url)
+            .unwrap();
 
     assert_eq!(notes_url, "/go/?id=xcode-14-sdk-rn");
 }

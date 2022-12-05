@@ -3,6 +3,7 @@
 //!
 
 use std::string::ToString;
+
 use lazy_static::lazy_static;
 
 use crate::cli::cli;
@@ -11,7 +12,9 @@ use crate::selectors::Selectors;
 mod article;
 mod cli;
 mod parse;
+mod product;
 mod selectors;
+mod software_release;
 mod url;
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -41,8 +44,9 @@ fn main() {
 
     let articles = parse::parse_articles(body).unwrap();
 
-    articles.iter().for_each(|article| {
-        match article.release_notes_url {
+    articles
+        .iter()
+        .for_each(|article| match article.release_notes_url {
             Some(_) => {
                 print!("{}", article);
                 if *unfurl_urls {
@@ -56,6 +60,5 @@ fn main() {
                     println!("{}", article);
                 }
             }
-        }
-    });
+        });
 }
