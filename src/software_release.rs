@@ -2,7 +2,7 @@
 //! software_release.rs
 //!
 
-use semver::{BuildMetadata, Prerelease, Version};
+use semver::{Version};
 
 use crate::product::Product;
 

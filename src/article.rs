@@ -8,7 +8,7 @@ use std::{
 };
 
 use chrono::NaiveDate;
-use semver::{BuildMetadata, Prerelease};
+
 use url::Url;
 
 use crate::product::Product;
@@ -43,7 +43,7 @@ impl Article {
         // iOS 16.2 beta 4 (20C5058d)
         // iOS 16.1.2 (20B110)
 
-        let mut tokens = self.title.split(" ");
+        let mut tokens = self.title.split(' ');
         // for token in tokens {}
         let product_name = tokens.next().unwrap();
 
@@ -51,18 +51,18 @@ impl Article {
             .map(|product| {
                 let mut version_string = tokens.next().unwrap().to_string();
                 let mut tmp_string: &str = tokens.next().unwrap();
-                while !tmp_string.contains("(") {
+                while !tmp_string.contains('(') {
                     version_string = format!("{}-{}", version_string, tmp_string);
                     tmp_string = tokens.next().unwrap();
                 }
 
-                if tmp_string.contains("(") {
+                if tmp_string.contains('(') {
                     // Crop parentheses off both ends
                     let build_string = &tmp_string[1..tmp_string.len() - 1];
                     version_string = format!("{}+{}", version_string, build_string);
                 }
 
-                let version = lenient_semver::parse(&*version_string).unwrap();
+                let version = lenient_semver::parse(&version_string).unwrap();
                 Some(SoftwareRelease { product, version })
             })
             .unwrap_or(None)
@@ -74,7 +74,7 @@ impl Display for Article {
         write!(
             f,
             "{} - {}",
-            self.date.format("%Y-%m-%d").to_string(),
+            self.date.format("%Y-%m-%d"),
             self.title
         )
     }
