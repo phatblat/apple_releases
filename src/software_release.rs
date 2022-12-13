@@ -2,7 +2,7 @@
 //! software_release.rs
 //!
 
-use semver::{BuildMetadata, Prerelease, Version};
+use semver::Version;
 
 use crate::product::Product;
 
@@ -24,6 +24,9 @@ fn test_semver_prerelease_parsing() {
     assert_eq!(version.major, 16);
     assert_eq!(version.minor, 2);
     assert_eq!(version.patch, 0);
-    assert_eq!(version.pre, Prerelease::new("beta.4").unwrap());
-    assert_eq!(version.build, BuildMetadata::new("20C5058d").unwrap());
+    assert_eq!(version.pre, semver::Prerelease::new("beta.4").unwrap());
+    assert_eq!(
+        version.build,
+        semver::BuildMetadata::new("20C5058d").unwrap()
+    );
 }
