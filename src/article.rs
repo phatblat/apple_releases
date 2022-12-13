@@ -71,12 +71,7 @@ impl Article {
 
 impl Display for Article {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} - {}",
-            self.date.format("%Y-%m-%d"),
-            self.title
-        )
+        write!(f, "{} - {}", self.date.format("%Y-%m-%d"), self.title)
     }
 }
 
@@ -123,10 +118,13 @@ fn test_software_prerelease() {
     assert_eq!(release.version.major, 16);
     assert_eq!(release.version.minor, 2);
     assert_eq!(release.version.patch, 0);
-    assert_eq!(release.version.pre, Prerelease::new("beta-3").unwrap());
+    assert_eq!(
+        release.version.pre,
+        semver::Prerelease::new("beta-3").unwrap()
+    );
     assert_eq!(
         release.version.build,
-        BuildMetadata::new("20C5049e").unwrap()
+        semver::BuildMetadata::new("20C5049e").unwrap()
     );
     assert_eq!(release.version.to_string(), "16.2.0-beta-3+20C5049e");
 }
@@ -145,7 +143,10 @@ fn test_software_release() {
     assert_eq!(release.version.major, 16);
     assert_eq!(release.version.minor, 1);
     assert_eq!(release.version.patch, 2);
-    assert_eq!(release.version.pre, Prerelease::new("").unwrap());
-    assert_eq!(release.version.build, BuildMetadata::new("20B110").unwrap());
+    assert_eq!(release.version.pre, semver::Prerelease::new("").unwrap());
+    assert_eq!(
+        release.version.build,
+        semver::BuildMetadata::new("20B110").unwrap()
+    );
     assert_eq!(release.version.to_string(), "16.1.2+20B110");
 }
