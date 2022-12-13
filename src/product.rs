@@ -2,12 +2,8 @@
 //! product.rs
 //!
 
-
-
-use strum_macros::EnumString;
-
 #[allow(non_camel_case_types)]
-#[derive(Debug, EnumString, PartialEq)]
+#[derive(Debug, PartialEq, enum_utils::FromStr)]
 pub(crate) enum Product {
     iOS,
     iPadOS,
@@ -21,16 +17,16 @@ pub(crate) enum Product {
 
 #[test]
 fn parse_product_existing_variants() {
-    assert_eq!(Product::iOS, Product::from_str("iOS").unwrap());
-    assert_eq!(Product::macOS, Product::from_str("macOS").unwrap());
-    assert_eq!(Product::watchOS, Product::from_str("watchOS").unwrap());
-    assert_eq!(Product::tvOS, Product::from_str("tvOS").unwrap());
-    assert_eq!(Product::Xcode, Product::from_str("Xcode").unwrap());
+    assert_eq!(Product::iOS, "iOS".parse().unwrap());
+    assert_eq!(Product::macOS, "macOS".parse().unwrap());
+    assert_eq!(Product::watchOS, "watchOS".parse().unwrap());
+    assert_eq!(Product::tvOS, "tvOS".parse().unwrap());
+    assert_eq!(Product::Xcode, "Xcode".parse().unwrap());
 }
 
 #[test]
 fn parse_product_nonexistent_variant() {
-    let result = Product::from_str("blah");
+    let result = "blah".parse::<Product>();
     assert!(result.is_err());
-    assert_eq!(strum::ParseError::VariantNotFound, result.unwrap_err());
+    assert_eq!(result.unwrap_err(), ());
 }
