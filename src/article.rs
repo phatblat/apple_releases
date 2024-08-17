@@ -4,6 +4,8 @@
 
 use crate::software_release::SoftwareRelease;
 use chrono::NaiveDate;
+use semver::{BuildMetadata, Prerelease};
+use std::fmt::Write;
 use std::fmt::{Display, Formatter};
 use url::Url;
 
@@ -38,12 +40,31 @@ impl Article {
 impl Display for Article {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         if let Some(SoftwareRelease { product, version }) = &self.software_release {
+            let mut version_fmt = String::new();
+
+            // Write semver without trailing zeros
+            write!(&mut version_fmt, "{}", version.major.to_string())?;
+            // Include minor if we have a patch version
+            if version.minor > 0 || version.patch > 0 {
+                write!(&mut version_fmt, ".{}", version.minor.to_string())?;
+            }
+            if version.patch > 0 {
+                write!(&mut version_fmt, ".{}", version.patch.to_string())?;
+            }
+
+            if version.pre != Prerelease::EMPTY {
+                write!(&mut version_fmt, " {}", version.pre.to_string().replace("-", " "))?;
+            }
+            if version.build != BuildMetadata::EMPTY {
+                write!(&mut version_fmt, " ({})", version.build.to_string())?;
+            }
+
             write!(
                 formatter,
                 "{} - {} {}",
                 self.date.format("%Y-%m-%d"),
                 product,
-                version
+                version_fmt
             )
         } else {
             write!(formatter, "{} - {}", self.date.format("%Y-%m-%d"), self.title)
