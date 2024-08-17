@@ -36,7 +36,6 @@ lazy_static! {
 fn main() {
     let args = cli().get_matches();
     let show_all = args.get_one::<bool>("all").unwrap();
-    let unfurl_urls = args.get_one::<bool>("unfurl").unwrap();
 
     let body = url::get(APPLE_DEV_RELEASES.to_string()).unwrap();
 

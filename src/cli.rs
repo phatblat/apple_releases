@@ -20,14 +20,6 @@ pub(crate) fn cli() -> Command {
                 .help("Show all releases")
                 .action(ArgAction::SetTrue),
         )
-        .arg(
-            // --unfurl
-            Arg::new("unfurl")
-                .long("unfurl")
-                .short('u')
-                .help("Unfurl release note URLs")
-                .action(ArgAction::SetTrue),
-        )
         .after_help(
             "Longer explanation to appear after the options when \
                  displaying the help information from --help or -h",

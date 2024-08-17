@@ -3,12 +3,10 @@
 //!
 
 use crate::article::Article;
-use crate::product::Product;
 use crate::software_release::SoftwareRelease;
 use crate::{GenericResult, SELECTORS};
 use chrono::NaiveDate;
 use scraper::{ElementRef, Html, Selector};
-use semver::{BuildMetadata, Prerelease, Version};
 
 /// Finds articles in the HTML.
 ///
@@ -32,7 +30,7 @@ pub fn parse_articles(content: String) -> GenericResult<Vec<Article>> {
             .filter(|url| url.as_str().contains("developer.apple.com"));
 
         // TODO: Log debug
-        let url = notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
+        // let url = notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
         // println!("{} - {}, <{}>", date, title, url.unwrap_or_default());
 
         let article = Article {
