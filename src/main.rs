@@ -2,12 +2,10 @@
 //! main.rs
 //!
 
-use std::string::ToString;
-
-use lazy_static::lazy_static;
-
 use crate::cli::cli;
 use crate::selectors::Selectors;
+use lazy_static::lazy_static;
+use std::string::ToString;
 
 mod article;
 mod cli;

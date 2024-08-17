@@ -2,11 +2,13 @@
 //! parse.rs
 //!
 
+use crate::article::Article;
+use crate::product::Product;
+use crate::software_release::SoftwareRelease;
+use crate::{GenericResult, SELECTORS};
 use chrono::NaiveDate;
 use scraper::{ElementRef, Html, Selector};
-
-use crate::article::Article;
-use crate::{GenericResult, SELECTORS};
+use semver::{BuildMetadata, Prerelease, Version};
 
 /// Finds articles in the HTML.
 ///
@@ -30,14 +32,17 @@ pub fn parse_articles(content: String) -> GenericResult<Vec<Article>> {
             .filter(|url| url.as_str().contains("developer.apple.com"));
 
         // TODO: Log debug
-        // let url = notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
-        // println!("{} - {}, <{}>", date, title, url.unwrap_or_default());
+        let url = notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
+        println!("{} - {}, <{}>", date, title, url.unwrap_or_default());
 
-        articles.push(Article {
-            title,
+        let article = Article {
+            title: title.clone(),
+            software_release: SoftwareRelease::software_release(title),
             date,
             release_notes_url: notes_url,
-        });
+        };
+
+        articles.push(article);
     }
 
     Ok(articles)
@@ -149,6 +154,20 @@ fn test_parse_title() {
     let title = parse_article_title(&fragment.root_element(), &SELECTORS.title).unwrap();
 
     assert_eq!(title, "Xcode 14 beta 5 (14A5294e)");
+}
+
+
+#[test]
+fn test_software_release() {
+    let title = String::from("Xcode 14 beta 5 (14A5294e)");
+    let release = SoftwareRelease::software_release(title).unwrap();
+
+    assert_eq!(release.product, Product::Xcode);
+
+    let mut expected_version = Version::new(14, 0, 0);
+    expected_version.pre = Prerelease::new("beta-5").unwrap();
+    expected_version.build = BuildMetadata::new("14A5294e").unwrap();
+    assert_eq!(release.version, expected_version);
 }
 
 #[test]
