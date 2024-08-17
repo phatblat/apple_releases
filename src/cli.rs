@@ -21,8 +21,8 @@ pub(crate) fn cli() -> Command {
                 .action(ArgAction::SetTrue),
         )
         .after_help(
-            "Longer explanation to appear after the options when \
-                 displaying the help information from --help or -h",
+            "This tool parses the content of the Apple Developer Software Updates page: \
+            https://developer.apple.com/news/releases/",
         )
 }
 
