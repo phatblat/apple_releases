@@ -2,6 +2,9 @@
 //! product.rs
 //!
 
+use std::fmt;
+use std::fmt::Display;
+
 #[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, enum_utils::FromStr)]
 pub(crate) enum Product {
@@ -12,6 +15,20 @@ pub(crate) enum Product {
     visionOS,
     watchOS,
     Xcode,
+}
+
+impl Display for Product {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Product::iOS => write!(f, "iOS"),
+            Product::iPadOS => write!(f, "iPadOS"),
+            Product::macOS => write!(f, "macOS"),
+            Product::tvOS => write!(f, "tvOS"),
+            Product::visionOS => write!(f, "visionOS"),
+            Product::watchOS => write!(f, "watchOS"),
+            Product::Xcode => write!(f, "Xcode"),
+        }
+    }
 }
 
 /* ---------------------------------------------------------------------------------------------- */

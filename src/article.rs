@@ -36,8 +36,18 @@ impl Article {
 }
 
 impl Display for Article {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} - {}", self.date.format("%Y-%m-%d"), self.title)
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        if let Some(SoftwareRelease { product, version }) = &self.software_release {
+            write!(
+                formatter,
+                "{} - {} {}",
+                self.date.format("%Y-%m-%d"),
+                product,
+                version
+            )
+        } else {
+            write!(formatter, "{} - {}", self.date.format("%Y-%m-%d"), self.title)
+        }
     }
 }
 
@@ -46,6 +56,7 @@ impl Display for Article {
 #[test]
 fn test_article_display() {
     let date = NaiveDate::parse_from_str("November 15, 2022", "%B %d, %Y").unwrap();
+
     let article = Article {
         title: "iOS 16.2 beta 3 (20C5049e)".to_string(),
         software_release: None,
@@ -64,6 +75,7 @@ fn test_article_display_software_release() {
     let title = "iOS 16.2 beta 3 (20C5049e)";
     let date = NaiveDate::parse_from_str("November 15, 2022", "%B %d, %Y").unwrap();
     let release = SoftwareRelease::software_release(title.to_string()).unwrap();
+
     let article = Article {
         title: title.to_string(),
         software_release: Some(release),
