@@ -33,7 +33,7 @@ pub fn parse_articles(content: String) -> GenericResult<Vec<Article>> {
 
         // TODO: Log debug
         let url = notes_url.as_ref().map_or(None, |url| Some(url.to_string()));
-        println!("{} - {}, <{}>", date, title, url.unwrap_or_default());
+        // println!("{} - {}, <{}>", date, title, url.unwrap_or_default());
 
         let article = Article {
             title: title.clone(),
