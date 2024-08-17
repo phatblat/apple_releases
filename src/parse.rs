@@ -194,10 +194,10 @@ fn test_parse_date() {
 fn test_parse_release_notes_link() {
     let html = r###"
         <span class="article-text">
-            <p> <a href="/download/applications" class="more">View downloads</a></p>
-            <il>
-                <p><a href="/go/?id=xcode-14-sdk-rn" class="more">View release notes</a></p>
-            </il>
+            <ul class="links-stacked">
+                <li><a href="/download/applications" class="more">View downloads</a></li>
+                <li><a href="/go/?id=xcode-16_1-sdk-rn" class="more">View release notes</a></li>
+            </ul>
         </span>
     "###
     .to_string();
@@ -205,15 +205,13 @@ fn test_parse_release_notes_link() {
     let fragment = Html::parse_fragment(&html);
 
     // test parsing using local selector
-    let selector = Selector::parse(r#"span.article-text il a.more"#).unwrap();
+    let selector = Selector::parse(r#"span.article-text ul.links-stacked li:nth-child(2) a.more"#).unwrap();
     let element = fragment.select(&selector).next().unwrap().value();
-    // .ok_or("No href attribute found")?
-    // .to_string()
     println!("{}", element.attr("href").unwrap());
 
     let notes_url =
         parse_release_notes_link(&fragment.root_element(), &SELECTORS.release_notes_short_url)
             .unwrap();
 
-    assert_eq!(notes_url, "/go/?id=xcode-14-sdk-rn");
+    assert_eq!(notes_url, "/go/?id=xcode-16_1-sdk-rn");
 }
