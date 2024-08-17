@@ -8,8 +8,9 @@ pub(crate) enum Product {
     iOS,
     iPadOS,
     macOS,
-    watchOS,
     tvOS,
+    visionOS,
+    watchOS,
     Xcode,
 }
 
@@ -19,8 +20,9 @@ pub(crate) enum Product {
 fn parse_product_existing_variants() {
     assert_eq!(Product::iOS, "iOS".parse().unwrap());
     assert_eq!(Product::macOS, "macOS".parse().unwrap());
-    assert_eq!(Product::watchOS, "watchOS".parse().unwrap());
     assert_eq!(Product::tvOS, "tvOS".parse().unwrap());
+    assert_eq!(Product::visionOS, "visionOS".parse().unwrap());
+    assert_eq!(Product::watchOS, "watchOS".parse().unwrap());
     assert_eq!(Product::Xcode, "Xcode".parse().unwrap());
 }
 
