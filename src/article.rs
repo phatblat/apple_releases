@@ -39,33 +39,34 @@ impl Article {
 
 impl Display for Article {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{} - ", self.date.format("%Y-%m-%d"))?;
+
         if let Some(SoftwareRelease { product, version }) = &self.software_release {
-            let mut version_fmt = String::new();
+            write!(formatter, "{} ", product)?;
 
             // Write semver without trailing zeros
-            write!(&mut version_fmt, "{}", version.major.to_string())?;
+            write!(formatter, "{}", version.major.to_string())?;
             // Include minor if we have a patch version
             if version.minor > 0 || version.patch > 0 {
-                write!(&mut version_fmt, ".{}", version.minor.to_string())?;
+                write!(formatter, ".{}", version.minor.to_string())?;
             }
             if version.patch > 0 {
-                write!(&mut version_fmt, ".{}", version.patch.to_string())?;
+                write!(formatter, ".{}", version.patch.to_string())?;
             }
 
             if version.pre != Prerelease::EMPTY {
-                write!(&mut version_fmt, " {}", version.pre.to_string().replace("-", " "))?;
+                write!(formatter, " {}", version.pre.to_string().replace("-", " "))?;
             }
             if version.build != BuildMetadata::EMPTY {
-                write!(&mut version_fmt, " ({})", version.build.to_string())?;
+                write!(formatter, " ({})", version.build.to_string())?;
             }
 
-            write!(
-                formatter,
-                "{} - {} {}",
-                self.date.format("%Y-%m-%d"),
-                product,
-                version_fmt
-            )
+            if let Some(url) = &self.release_notes_url {
+                write!(formatter, " - {}", url.to_string())?;
+            }
+
+            // Suppresses error: Type mismatch [E0308] expected `core::fmt::Result`, but found `()`
+            write!(formatter, "")
         } else {
             write!(formatter, "{} - {}", self.date.format("%Y-%m-%d"), self.title)
         }

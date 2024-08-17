@@ -44,14 +44,14 @@ fn main() {
 
     articles
         .iter()
-        .for_each(|article| match article.release_notes_url {
+        .for_each(|article| match article.software_release {
             Some(_) => {
-                print!("{}", article);
-                if *unfurl_urls {
-                    println!(" - {}", article.release_notes_url_unfurled().unwrap());
-                } else {
-                    println!(" - {}", article.release_notes_url.as_ref().unwrap());
-                }
+                println!("{}", article);
+                // if *unfurl_urls {
+                //     println!(" - {}", article.release_notes_url_unfurled().unwrap());
+                // } else {
+                //     println!(" - {}", article.release_notes_url.as_ref().unwrap());
+                // }
             }
             _ => {
                 if *show_all {

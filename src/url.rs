@@ -18,11 +18,7 @@ pub fn get(url: String) -> GenericResult<String> {
         .user_agent(APP_USER_AGENT)
         .build()?;
     let res = client.get(url).send()?;
-    // println!("{:#?}", res);
-
     let body = res.text()?;
-    // println!("{}", body);
-
     Ok(body)
 }
 
@@ -74,9 +70,7 @@ fn base_url(mut url: Url) -> GenericResult<Url> {
             return Err(GenericError::try_from("Error extracting base URL").unwrap());
         }
     }
-
     url.set_query(None);
-
     Ok(url)
 }
 
