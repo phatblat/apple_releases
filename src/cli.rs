@@ -4,11 +4,13 @@
 
 use clap::{Arg, ArgAction, Command};
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 /// Parses command line arguments.
 pub(crate) fn cli() -> Command {
     Command::new("apple_releases")
         .about("CLI for the Apple Developer News RSS feed")
-        .version("0.1.0")
+        .version(VERSION)
         .author("Ben Chatelain")
         .arg(
             // --all
