@@ -34,13 +34,29 @@ impl SoftwareRelease {
                 }
 
                 if tmp_string.contains('(') {
-                    // Crop parentheses off both ends
-                    let build_string = &tmp_string[1..tmp_string.len() - 1];
-                    version_string = format!("{}+{}", version_string, build_string);
+                    // Extract what's inside the parentheses, handling case where closing parenthesis is missing
+                    let start = tmp_string.find('(').unwrap() + 1;
+                    let end = tmp_string.rfind(')').unwrap_or(tmp_string.len());
+                    
+                    // Make sure start is valid and doesn't exceed the string length
+                    if start < tmp_string.len() {
+                        let build_string = &tmp_string[start..end];
+                        version_string = format!("{}+{}", version_string, build_string);
+                    }
                 }
 
-                let version = lenient_semver::parse(&version_string).unwrap();
-                Some(SoftwareRelease { product, version })
+                // Sanitize the version string to remove problematic characters
+                // Remove any stray parentheses that might interfere with semver parsing
+                let sanitized_version = version_string.replace("(", "").replace(")", "");
+
+                // Try to parse the version, returning None if it fails
+                match lenient_semver::parse(&sanitized_version) {
+                    Ok(version) => Some(SoftwareRelease { product, version }),
+                    Err(_) => {
+                        eprintln!("Warning: Failed to parse version string: {}", sanitized_version);
+                        None
+                    }
+                }
             })
             .unwrap_or(None)
     }
